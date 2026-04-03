@@ -1,0 +1,1620 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Контроль поручений</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root {
+  --c1: #F0B800; --c1d: #D4A200; --c1l: #FFFBEB; --c1ll: #FFF3CC;
+  --nvt: #F0B800; --nyg: #E03720;
+  --ok: #059669; --warn: #d97706; --err: #dc2626;
+  --g50: #f8fafc; --g100: #f1f5f9; --g200: #e2e8f0;
+  --g400: #94a3b8; --g600: #475569; --g800: #1e293b; --g900: #0f172a;
+  --r: 14px; --rs: 10px; --sh: 0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.06);
+  --sh2: 0 4px 16px rgba(0,0,0,.1), 0 2px 6px rgba(0,0,0,.07);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#f0f4f8;color:var(--g800);min-height:100vh;font-size:15px}
+
+/* ─── HEADER ─── */
+.hdr {
+  background: linear-gradient(135deg, #1A1A1A 0%, #2D2D2D 100%);
+  padding: 0 28px;
+  box-shadow: 0 2px 12px rgba(0,0,0,.4);
+  position: sticky; top: 0; z-index: 100;
+}
+.hdr-top {
+  display: flex; align-items: center; gap: 20px;
+  height: 60px; flex-wrap: wrap;
+}
+.hdr-logo { display: flex; align-items: center; gap: 10px; color: #fff; text-decoration: none; }
+.hdr-logo svg { width: 28px; height: 28px; opacity: .9; }
+.hdr-title { font-size: 19px; font-weight: 700; color: #fff; letter-spacing: .2px; }
+.hdr-subtitle { font-size: 13px; color: rgba(255,255,255,.65); margin-top: 1px; }
+
+/* Branch switcher */
+.branch-sw {
+  display: flex; gap: 4px;
+  background: rgba(255,255,255,.15);
+  border-radius: 50px; padding: 4px;
+  margin-left: 8px;
+}
+.branch-btn {
+  padding: 5px 16px; border-radius: 50px; border: none; cursor: pointer;
+  font-size: 13px; font-weight: 500; font-family: inherit;
+  transition: all .2s; color: rgba(255,255,255,.75); background: transparent;
+  white-space: nowrap;
+}
+.branch-btn.on {
+  background: var(--c1); color: #1A1A1A; font-weight: 700;
+  box-shadow: 0 2px 8px rgba(0,0,0,.2);
+}
+body.branch-nyagan .branch-btn.on { background: var(--nyg); color: #fff; }
+body.branch-nyagan .hdr { background: linear-gradient(135deg, #1A1A1A 0%, #2D2D2D 100%); box-shadow: 0 2px 12px rgba(0,0,0,.4); }
+body.branch-nyagan { --c1: #E03720; --c1d: #C32D18; --c1l: #FFF1EE; --c1ll: #FDDDD8; }
+
+/* Stats row */
+.stats-row {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 28px; background: rgba(255,255,255,.08);
+  border-top: 1px solid rgba(255,255,255,.1);
+  overflow-x: auto;
+}
+.chip {
+  display: flex; align-items: center; gap: 5px;
+  padding: 4px 12px; border-radius: 50px;
+  font-size: 12px; font-weight: 500; white-space: nowrap;
+  background: rgba(255,255,255,.18); color: #fff;
+}
+.chip .dot { width: 7px; height: 7px; border-radius: 50%; }
+.chip-red { background: rgba(220,38,38,.5); }
+.chip-amber { background: rgba(217,119,6,.5); }
+.chip-green { background: rgba(5,150,105,.4); }
+.chip .num { font-size: 14px; font-weight: 700; }
+
+/* ─── TABS ─── */
+.tabs {
+  background: #fff; border-bottom: 1px solid var(--g200);
+  padding: 0 28px; display: flex; gap: 2px;
+}
+.tb {
+  padding: 14px 18px; border: none; background: none; cursor: pointer;
+  font-size: 15px; font-weight: 500; color: var(--g400);
+  border-bottom: 3px solid transparent; transition: .2s;
+  font-family: inherit; display: flex; align-items: center; gap: 6px;
+}
+.tb.on { color: #1A1A1A; border-bottom-color: var(--c1); }
+body.branch-nyagan .tb.on { color: var(--c1); }
+.tb:hover:not(.on) { color: var(--g600); background: var(--g50); }
+
+/* ─── LAYOUT ─── */
+.page { padding: 24px 28px; max-width: 1440px; }
+.tc { display: none; } .tc.on { display: block; }
+
+/* ─── FILTER BAR ─── */
+.fbar {
+  display: flex; gap: 10px; flex-wrap: wrap;
+  margin-bottom: 18px; align-items: center;
+}
+.fi {
+  padding: 9px 14px; border: 1.5px solid var(--g200);
+  border-radius: var(--rs); font-size: 14px; outline: none;
+  font-family: inherit; background: #fff; color: var(--g800);
+  transition: .2s;
+}
+.fi:focus { border-color: var(--c1); box-shadow: 0 0 0 3px var(--c1ll); }
+.fi-search { flex: 1; min-width: 180px; }
+
+/* ─── TABLE ─── */
+.tbl-card {
+  background: #fff; border-radius: var(--r);
+  box-shadow: var(--sh); overflow: hidden;
+  border: 1px solid var(--g200);
+}
+.tbl-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+thead th {
+  background: var(--g50); padding: 9px 12px;
+  text-align: left; font-weight: 600; font-size: 12px;
+  color: var(--g400); text-transform: uppercase; letter-spacing: .5px;
+  border-bottom: 1.5px solid var(--g200); white-space: nowrap;
+  position: sticky; top: 0;
+}
+td { padding: 7px 12px; border-bottom: 1px solid #f8fafc; vertical-align: middle; }
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: var(--g50); }
+tr.ov td { background: #fff8f8; }
+tr.ov:hover td { background: #ffefef; }
+.task-cell { max-width: 380px; line-height: 1.5; }
+.task-text { color: var(--g800); }
+.task-num { font-size: 11px; color: var(--g400); margin-bottom: 2px; }
+
+/* ─── BADGES ─── */
+.badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 5px 12px; border-radius: 50px;
+  font-size: 12px; font-weight: 600; cursor: pointer;
+  transition: .15s; white-space: nowrap;
+  user-select: none;
+}
+.badge:hover { filter: brightness(.94); }
+.b-work { background: #fef9c3; color: #854d0e; border: 1px solid #fde68a; }
+.b-done { background: #dcfce7; color: #14532d; border: 1px solid #bbf7d0; }
+.b-over { background: #fee2e2; color: #7f1d1d; border: 1px solid #fecaca; }
+.b-late { background: #ffedd5; color: #9a3412; border: 1px solid #fed7aa; }
+.b-drop { background: var(--g100); color: var(--g600); border: 1px solid var(--g200); }
+
+/* Source tags */
+.stag {
+  display: inline-block; padding: 2px 8px; border-radius: 50px;
+  font-size: 10px; font-weight: 600; margin-top: 4px; letter-spacing: .2px;
+}
+.st-email { background: var(--c1ll); color: #1A1A1A; }
+.st-protocol { background: #dcfce7; color: #166534; }
+.st-verbal { background: #fef9c3; color: #713f12; }
+.st-photo { background: #FFF3CC; color: #8B6800; }
+
+/* ─── CARDS ─── */
+.card {
+  background: #fff; border-radius: var(--r);
+  box-shadow: var(--sh); padding: 24px; margin-bottom: 20px;
+  border: 1px solid var(--g200);
+}
+.card-title {
+  font-size: 17px; font-weight: 700; margin-bottom: 4px; color: var(--g800);
+  display: flex; align-items: center; gap: 8px;
+}
+.card-desc { font-size: 14px; color: var(--g400); margin-bottom: 18px; }
+
+/* ─── FORM ─── */
+.fg { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; }
+.fld { display: flex; flex-direction: column; gap: 5px; }
+.fld label { font-size: 12px; font-weight: 600; color: var(--g600); letter-spacing: .3px; }
+.fc {
+  padding: 9px 13px; border: 1.5px solid var(--g200); border-radius: var(--rs);
+  font-size: 14px; outline: none; font-family: inherit; width: 100%;
+  color: var(--g800); background: #fff; transition: .2s;
+}
+.fc:focus { border-color: var(--c1); box-shadow: 0 0 0 3px var(--c1ll); }
+textarea.fc { resize: vertical; min-height: 80px; line-height: 1.5; }
+
+/* ─── BUTTONS ─── */
+.btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 10px 20px; border: none; border-radius: var(--rs);
+  font-size: 14px; font-weight: 600; cursor: pointer;
+  transition: .2s; font-family: inherit; white-space: nowrap;
+}
+.btn-p { background: var(--c1); color: #1A1A1A; font-weight: 700; }
+.btn-p:hover { background: var(--c1d); box-shadow: 0 4px 12px rgba(240,184,0,.35); }
+body.branch-nyagan .btn-p { color: #fff; }
+body.branch-nyagan .btn-p:hover { box-shadow: 0 4px 12px rgba(224,55,32,.3); }
+.btn-g { background: var(--ok); color: #fff; }
+.btn-g:hover { background: #047857; box-shadow: 0 4px 12px rgba(5,150,105,.3); }
+.btn-s { background: var(--g100); color: var(--g600); }
+.btn-s:hover { background: var(--g200); }
+.btn-r { background: #fee2e2; color: #991b1b; }
+.btn-r:hover { background: #fecaca; }
+.btn-sm { padding: 7px 14px; font-size: 13px; }
+.btn-xs { padding: 5px 11px; font-size: 12px; border-radius: 6px; }
+
+/* ─── SUB TABS ─── */
+.stabs {
+  display: flex; gap: 6px; margin-bottom: 20px; flex-wrap: wrap;
+  background: var(--g100); border-radius: var(--r); padding: 5px;
+}
+.stb {
+  padding: 8px 16px; border: none; border-radius: var(--rs);
+  background: transparent; cursor: pointer; font-size: 13px;
+  font-weight: 500; color: var(--g600); transition: .2s;
+  font-family: inherit; flex: 1; text-align: center;
+}
+.stb.on { background: var(--c1); color: #1A1A1A; font-weight: 700; box-shadow: var(--sh); }
+body.branch-nyagan .stb.on { color: #fff; }
+
+/* ─── DROP ZONE ─── */
+.dz {
+  border: 2px dashed var(--g200); border-radius: var(--r);
+  padding: 40px 24px; text-align: center; cursor: pointer;
+  transition: .25s; background: var(--g50);
+}
+.dz:hover, .dz.drag { border-color: var(--c1); background: var(--c1l); }
+.dz-ico { font-size: 44px; margin-bottom: 12px; }
+.dz p { color: var(--g600); font-size: 13px; }
+.dz strong { color: var(--g800); }
+
+/* ─── PROGRESS ─── */
+.pbar { height: 5px; background: var(--g200); border-radius: 10px; margin: 10px 0; display: none; overflow: hidden; }
+.pfill { height: 100%; background: linear-gradient(90deg, var(--c1), #60a5fa); border-radius: 10px; transition: width .4s; }
+
+/* ─── PARSE RESULTS ─── */
+.pr {
+  background: var(--g50); border: 1.5px solid var(--g200);
+  border-radius: var(--r); padding: 16px; margin-bottom: 12px;
+  transition: .2s;
+}
+.pr:hover { border-color: var(--c1ll); }
+.pr-head {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 12px;
+}
+.pr-num {
+  font-size: 10px; font-weight: 700; color: var(--g400);
+  text-transform: uppercase; letter-spacing: .5px;
+}
+
+/* ─── IO GRID ─── */
+.io2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
+@media(max-width: 660px) { .io2 { grid-template-columns: 1fr; } }
+
+/* ─── IMG PREVIEW ─── */
+.imgpv {
+  max-width: 100%; max-height: 280px; border-radius: var(--rs);
+  margin-top: 14px; border: 1.5px solid var(--g200);
+  box-shadow: var(--sh);
+}
+.ocr-st { font-size: 13px; color: var(--g600); margin-top: 8px; display: flex; align-items: center; gap: 6px; }
+
+/* ─── MODAL ─── */
+.mover {
+  display: none; position: fixed; inset: 0;
+  background: rgba(15,23,42,.5); backdrop-filter: blur(4px);
+  z-index: 1000; align-items: center; justify-content: center; padding: 20px;
+}
+.mover.on { display: flex; }
+.mdl {
+  background: #fff; border-radius: 20px; padding: 30px;
+  max-width: 640px; width: 100%; max-height: 90vh; overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0,0,0,.2);
+  animation: mdlIn .2s ease;
+}
+@keyframes mdlIn { from { transform: scale(.96) translateY(10px); opacity: 0; } to { transform: scale(1) translateY(0); opacity: 1; } }
+.mdl-title { font-size: 17px; font-weight: 800; margin-bottom: 20px; color: var(--g900); }
+.mac { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+
+/* ─── NOTIFICATION ─── */
+.ntf {
+  position: fixed; top: 20px; right: 20px; z-index: 3000;
+  padding: 13px 18px; border-radius: 12px;
+  font-size: 13px; font-weight: 500; color: #fff;
+  display: flex; align-items: center; gap: 8px;
+  transform: translateY(-100px) scale(.95); opacity: 0;
+  transition: all .3s cubic-bezier(.34,1.56,.64,1);
+  box-shadow: 0 8px 24px rgba(0,0,0,.2); max-width: 320px;
+  pointer-events: none;
+}
+.ntf.on { transform: translateY(0) scale(1); opacity: 1; }
+.ntf-ok { background: linear-gradient(135deg, #059669, #047857); }
+.ntf-err { background: linear-gradient(135deg, #dc2626, #b91c1c); }
+
+/* ─── EMPTY STATE ─── */
+.empty { text-align: center; padding: 72px 20px; color: var(--g400); }
+.empty-ico { font-size: 52px; margin-bottom: 14px; }
+.empty-txt { font-size: 15px; font-weight: 500; }
+.empty-sub { font-size: 13px; margin-top: 6px; }
+
+/* ─── DIVIDER ─── */
+.divider { height: 1px; background: var(--g200); margin: 20px 0; }
+
+/* ─── ACTION BTNS ─── */
+.abt {
+  background: none; border: none; cursor: pointer; padding: 5px 7px;
+  border-radius: 8px; font-size: 14px; transition: .15s; line-height: 1;
+}
+.abt:hover { background: var(--g100); }
+
+/* ─── BRANCH INDICATOR ─── */
+.branch-ind {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 3px 12px; border-radius: 50px; font-size: 11px; font-weight: 700;
+  letter-spacing: .3px; text-transform: uppercase;
+}
+.bi-nvt { background: var(--c1ll); color: #1A1A1A; }
+.bi-nyg { background: #FDDDD8; color: #C32D18; }
+
+/* ─── RESPONSIVE ─── */
+@media(max-width: 700px) {
+  .hdr-top { height: auto; padding: 12px 0; flex-direction: column; align-items: flex-start; gap: 10px; }
+  .hdr { padding: 0 16px; }
+  .stats-row { padding: 8px 16px; }
+  .tabs { padding: 0 16px; overflow-x: auto; }
+  .page { padding: 14px 16px; }
+  .stabs { flex-direction: column; }
+  .branch-sw { align-self: stretch; }
+  .branch-btn { flex: 1; text-align: center; }
+}
+
+/* ─── MULTI-SELECT СТАТУСОВ ─── */
+.msel-wrap { position: relative; }
+.msel-btn {
+  display: flex; align-items: center; cursor: pointer;
+  background: #fff; text-align: left; white-space: nowrap;
+  min-width: 160px; justify-content: space-between;
+  font-weight: 500; color: var(--g800);
+}
+.msel-btn.active { border-color: var(--c1); color: #1A1A1A; box-shadow: 0 0 0 3px var(--c1ll); background: var(--c1l); }
+body.branch-nyagan .msel-btn.active { color: var(--c1); background: #fff; }
+.msel-drop {
+  display: none; position: absolute; top: calc(100% + 6px); left: 0;
+  background: #fff; border: 1.5px solid var(--g200); border-radius: var(--r);
+  box-shadow: var(--sh2); z-index: 200; min-width: 240px; overflow: hidden;
+  animation: dropIn .15s ease;
+}
+@keyframes dropIn { from { opacity:0; transform:translateY(-6px); } to { opacity:1; transform:translateY(0); } }
+.msel-drop.open { display: block; }
+.msel-opt {
+  display: flex; align-items: center; gap: 10px; padding: 10px 16px;
+  cursor: pointer; font-size: 14px; color: var(--g800); transition: .15s;
+}
+.msel-opt:hover { background: var(--g50); }
+.msel-opt input[type=checkbox] { width: 16px; height: 16px; cursor: pointer; accent-color: var(--c1); flex-shrink: 0; }
+.msel-dot { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
+.b-work-dot { background: #fbbf24; }
+.b-over-dot { background: #f87171; }
+.b-late-dot { background: #fb923c; }
+.b-done-dot { background: #34d399; }
+.b-drop-dot { background: var(--g400); }
+.msel-footer { border-top: 1px solid var(--g100); padding: 8px 16px; }
+.msel-clr { background: none; border: none; font-size: 13px; color: var(--g400); cursor: pointer; font-family: inherit; padding: 0; }
+.msel-clr:hover { color: var(--err); }
+
+/* ─── INFOGRAPHIC ─── */
+.inf-panel {
+  background: #fff; border-radius: var(--r); border: 1px solid var(--g200);
+  box-shadow: var(--sh); margin-bottom: 16px; overflow: hidden;
+}
+.inf-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 18px 10px; border-bottom: 1px solid var(--g100);
+  gap: 12px; flex-wrap: wrap;
+}
+.inf-title {
+  font-size: 13px; font-weight: 700; color: var(--g800);
+  display: flex; align-items: center; gap: 7px;
+}
+.inf-legend {
+  display: flex; align-items: center; gap: 14px; font-size: 11px; color: var(--g600);
+}
+.inf-leg-item { display: flex; align-items: center; gap: 5px; }
+.inf-leg-dot { width: 10px; height: 10px; border-radius: 3px; }
+.inf-body { padding: 10px 18px 14px; }
+.inf-row {
+  display: grid; grid-template-columns: 140px 1fr 90px 32px;
+  align-items: center; gap: 10px; padding: 6px 8px;
+  border-radius: 8px; cursor: pointer; transition: .15s;
+}
+.inf-row:hover { background: var(--g50); }
+.inf-row.inf-sel { background: var(--c1l); outline: 1.5px solid var(--c1ll); }
+.inf-name {
+  font-size: 12px; font-weight: 500; color: var(--g800);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.inf-bar-wrap { position: relative; }
+.inf-bar {
+  height: 16px; border-radius: 6px; background: var(--g100);
+  overflow: hidden; display: flex;
+}
+.inf-seg { height: 100%; transition: width .4s ease; }
+.inf-ov  { background: #f87171; }
+.inf-act { background: #fbbf24; }
+.inf-don { background: #34d399; }
+.inf-counts {
+  display: flex; gap: 5px; justify-content: flex-end; align-items: center;
+}
+.inf-c {
+  font-size: 11px; font-weight: 700; padding: 2px 6px;
+  border-radius: 5px; line-height: 1;
+}
+.inf-c-ov  { background: #fee2e2; color: #991b1b; }
+.inf-c-act { background: #fef9c3; color: #854d0e; }
+.inf-c-don { background: #dcfce7; color: #14532d; }
+.inf-total { font-size: 12px; font-weight: 700; color: var(--g400); text-align: right; }
+.inf-clear {
+  font-size: 11px; color: #1A1A1A; cursor: pointer; font-weight: 600;
+  padding: 3px 8px; border-radius: 6px; background: var(--c1);
+  border: none; font-family: inherit; display: none;
+}
+body.branch-nyagan .inf-clear { color: #fff; }
+.inf-clear.vis { display: inline-block; }
+
+/* ─── SORTABLE HEADERS ─── */
+th.sortable { cursor: pointer; user-select: none; }
+th.sortable:hover { color: var(--c1); }
+th.sortable.asc::after  { content: ' ↑'; color: var(--c1); }
+th.sortable.desc::after { content: ' ↓'; color: var(--c1); }
+
+/* ─── PRINT ─── */
+@media print {
+  .hdr, .tabs, .fbar, .inf-panel, #emptyState .empty-sub,
+  .abt, .badge, .ntf, .mover, .stats-row { display: none !important; }
+  body { background: #fff !important; font-size: 11pt; }
+  .page { padding: 0 !important; max-width: 100% !important; }
+  .tbl-card { box-shadow: none !important; border: 1px solid #ccc !important; }
+  table { font-size: 10pt !important; }
+  thead th { background: #f0f0f0 !important; color: #000 !important; font-size: 9pt !important; }
+  td { padding: 5px 8px !important; }
+  tr.ov td { background: #fff0f0 !important; }
+  .task-cell { max-width: none !important; }
+  .print-header { display: block !important; }
+}
+.print-header {
+  display: none;
+  padding: 0 0 12px; margin-bottom: 14px;
+  border-bottom: 2px solid #1a56db;
+}
+.print-header h2 { font-size: 16pt; color: #1a56db; margin-bottom: 4px; }
+.print-header p  { font-size: 10pt; color: #555; }
+
+/* ─── SCROLLBAR ─── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--g200); border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover { background: var(--g400); }
+</style>
+
+<script>
+// ═══════════════════════════════════════════════════
+// PRELOADED DATA FROM EXCEL FILES
+// ═══════════════════════════════════════════════════
+(function() {
+  const SEED_KEY = 'porucheniya_seeded_v1';
+  if (!localStorage.getItem(SEED_KEY)) {
+    const nvt = [{"id": 1, "dateAssigned": "2025-02-28", "task": "25 К) Обеспечить своевременного предоставление отчетности в специальное управление", "responsible": "А.В. Шиманова", "manager": "", "datePlan": "", "dateFact": "", "notes": "", "status": "На исполнении", "reporting": "В день выполнения/По запросу", "source": "email"}, {"id": 2, "dateAssigned": "2025-04-09", "task": "СЗ-АБ-00499-25 ГО РНС) При направлении заявки на платеж (ЗПЛ) прикладывать реестр вполненных работ из ИС \"ЕКТП\" с выделением тех объемов и сумм по закрытым и акцептованным заявкам.", "responsible": "И.Н. Платков", "manager": "", "datePlan": "", "dateFact": "", "notes": "", "status": "На исполнении", "reporting": "В день выполнения/По запросу", "source": "email"}, {"id": 3, "dateAssigned": "2025-04-12", "task": "ИСХ-62-09916-25) Провести контрольные проверки корректности подключений и передачи данных в ИС \"ЕКТП\" по перспективным схемам подключения", "responsible": "И.Н. Платков", "manager": "", "datePlan": "2026-01-01", "dateFact": "2026-01-01", "notes": "", "status": "Исполнено", "reporting": "В день выполнения/По запросу", "source": "email"}, {"id": 4, "dateAssigned": "2025-08-15", "task": "76 К) Обеспечить подписание ДС для приведения трудовых договоров в соответствие с типовым шаблоном", "responsible": "М.А. Осипова", "manager": "", "datePlan": "2025-09-30", "dateFact": "", "notes": "24.02.2026\nДС ознакомление:\nЦТКРС №2 -100% (без учета СВО)\nЦТКРС №1 -  98% \nБПО- 91%\nЦПА- 89% \nАУП – 99%", "status": "На исполнении", "reporting": "В день выполнения/По запросу", "source": "email"}, {"id": 5, "dateAssigned": "2025-09-05", "task": "149) Обеспечить выполнение п. 4.2 приказа ГО №00597-25", "responsible": "А.Н. Дербуш", "manager": "", "datePlan": "2025-12-30", "dateFact": "", "notes": "прогнозные и плановые сроки вовлечения запасов корректируются на ежемесячной основе. Сроки по состоянию на 30.12.2025г. будут скорректированы при следующей загрузке запасов в ЕБДЗ 12.01.2026г.", "status": "На исполнении", "reporting": "В день выполнения/По запросу", "source": "email"}, {"id": 6, "dateAssigned": "2025-09-05", "task": "149) Обеспечить выполнение п. 4.3 приказа ГО №00597-25", "responsible": "А.Н. Дербуш", "manager": "", "datePlan": "2025-12-30", "dateFact": "", "notes": "сформирован перечень запасов по которым необходима загрузка в ЕБДЗ сертификатов/паспортов, ведется поиск документов и сохраняется на общем диске для последующей загрузки в SAP.", "status": "На исполнении", "reporting": "В день выполнения/По запросу", "source": "email"}, {"id": 7, "dateAssigned": "2025-09-29", "task": "86 ПС/ Провести закупочную процедуру на оказание услуг предоставления спутниковой связи", "responsible": "Г.А. Мурзыванов", "manager": "", "datePlan": "2025-12-26", "dateFact": "2026-02-19", "notes": "29.01.2026. Закупка услуг спутниковой связи  вынесена на ЗК на 05.02.2026", "status": "На исполнении", "reporting": "В день выполнения/По запросу", "source": "email"}, {"id": 8, "dateAssigned": "2025-10-09", "task": "56-ТБ/ Восстановить работоспособность охранно-пожарной сигнализации на участках БПО и АБК в г.Нефтеюганск", "responsible": "С.А. Завертяев", "manager": "", "datePlan": "2026-02-28", "dateFact": "2026-02-28", "notes": "договор заключен, 27.01.2026 представители ПО выезжают на объекты.", "status": "Исполнено", "reporting": "В день выполнения/По запросу", "source": "email"}, {"id": 9, "dateAssigned": "2025-11-17", "task": "96-ПС/ Организовать вывоз оборудования и материалов с Бахиловского месторождения", "responsible": "О.Д. Еремкин", "manager": "", "datePlan": "2026-07-31", "dateFact": "", "notes": "продолжаю вывоз площадками ООО «Ресурс» на к.322 НКТ и СБТ, пригодной к эксплуатации с дальнейшей отправкой в ЦТКРС-1", "status": "На исполнении", "reporting": "В день выполнения/По запросу", "source": "email"}, {"id": 10, "dateAssigned": "2025-11-19", "task": "Разместить контейнер с ловильным оборудованием на БПО Юганск", "responsible": "А.М. Загребельный", "manager": "", "datePlan": "2026-03-31", "dateFact": "", "notes": "", "status": "На исполнении", "reporting": "В день выполнения/По запросу", "source": "email"}, {"id": 11, "dateAssigned": "2025-12-10", "task": "Предоставить актуализированную потребность в мониторах", "responsible": "Е.В. Телицына", "manager": "", "datePlan": "2025-12-19", "dateFact": "2026-01-29", "notes": "", "status": "На исполнении", "reporting": "В день выполнения/По запросу", "source": "email"}, {"id": 12, "dateAssigned": "2025-12-17", "task": "Организовать изготовление вывески для нужд СП находящихся в Нефтеюганском регионе (ЦТКРС, БПО, ЦПА)", "responsible": "И.В. Шуховцева", "manager": "", "datePlan": "2026-01-30", "dateFact": "2026-01-29", "notes": "", "status": "Исполнено", "reporting": "В день выполнения/По запросу", "source": "email"}, {"id": 13, "dateAssigned": "2025-12-17", "task": "Внести изменения в ДИ работников согласно приказа об утверждении схемы взаимодействия при закрытии объемов", "responsible": "Н.А. Гуревич", "manager": "", "datePlan": "2025-12-30", "dateFact": "2026-02-10", "notes": "", "status": "На исполнении", "reporting": "В день выполнения/По запросу", "source": "email"}, {"id": 14, "dateAssigned": "2025-12-17", "task": "Повторно направить письмо о дополнительном вознаграждении мастеров направленном на снижение оттока персонала", "responsible": "Н.А. Гуревич", "manager": "", "datePlan": "2025-12-19", "dateFact": "2026-01-23", "notes": "", "status": "На исполнении", "reporting": "В день выполнения/По запросу", "source": "email"}, {"id": 15, "dateAssigned": "2026-01-19", "task": "01-ПС) Обеспечить контроль состояния оборудования находящегося в эксплуатации бригад: исправность, наличие и полнота документации, соответствие сроков эксплуатации, УЗД, ППР и т.д.", "responsible": "В.А. Пойлов", "manager": "", "datePlan": "", "dateFact": "", "notes": "", "status": "На исполнении", "reporting": "В день выполнения/По запросу", "source": "email"}, {"id": 16, "dateAssigned": "2026-01-19", "task": "Обеспечить контроль состояния оборудования находящегося в эксплуатации бригад: исправность, наличие и полнота документации, соответствие сроков эксплуатации, УЗД, ППР и т.д.", "responsible": "О.Д. Еремкин", "manager": "", "datePlan": "", "dateFact": "", "notes": "", "status": "На исполнении", "reporting": "В день выполнения/По запросу", "source": "email"}, {"id": 17, "dateAssigned": "2026-01-19", "task": "01-ПС) Обеспечить контроль состояния оборудования находящегося в эксплуатации бригад: исправность, наличие и полнота документации, соответствие сроков эксплуатации, УЗД, ППР и т.д.", "responsible": "В.С. Песляк", "manager": "", "datePlan": "", "dateFact": "", "notes": "", "status": "На исполнении", "reporting": "В день выполнения/По запросу", "source": "email"}, {"id": 18, "dateAssigned": "2026-01-19", "task": "01-ПС) Обеспечить контроль состояния оборудования находящегося в эксплуатации бригад: исправность, наличие и полнота документации, соответствие сроков эксплуатации, УЗД, ППР и т.д.", "responsible": "Д.Н. Горшенин", "manager": "", "datePlan": "", "dateFact": "", "notes": "", "status": "На исполнении", "reporting": "В день выполнения/По запросу", "source": "email"}, {"id": 19, "dateAssigned": "2026-01-19", "task": "01-ПС) Обеспечить контроль состояния оборудования находящегося в эксплуатации бригад: исправность, наличие и полнота документации, соответствие сроков эксплуатации, УЗД, ППР и т.д.", "responsible": "А.А. Правосуд", "manager": "", "datePlan": "", "dateFact": "", "notes": "", "status": "На исполнении", "reporting": "В день выполнения/По запросу", "source": "email"}, {"id": 20, "dateAssigned": "2026-01-19", "task": "01-ПС) Обеспечить контроль состояния оборудования находящегося в эксплуатации бригад: исправность, наличие и полнота документации, соответствие сроков эксплуатации, УЗД, ППР и т.д.", "responsible": "А.А. Гвоздев", "manager": "", "datePlan": "", "dateFact": "", "notes": "", "status": "На исполнении", "reporting": "В день выполнения/По запросу", "source": "email"}, {"id": 21, "dateAssigned": "2026-01-19", "task": "01-ПС) Обеспечить контроль состояния оборудования находящегося в эксплуатации бригад: исправность, наличие и полнота документации, соответствие сроков эксплуатации, УЗД, ППР и т.д.", "responsible": "Р.В. Левадский", "manager": "", "datePlan": "", "dateFact": "", "notes": "", "status": "На исполнении", "reporting": "В день выполнения/По запросу", "source": "email"}, {"id": 22, "dateAssigned": "2026-01-19", "task": "01-ПС) Обеспечить наличие запаса бытовых приборов, постельных принадлежностей", "responsible": "А.Н. Дербуш", "manager": "", "datePlan": "", "dateFact": "", "notes": "", "status": "На исполнении", "reporting": "В день выполнения/По запросу", "source": "email"}, {"id": 23, "dateAssigned": "2026-01-19", "task": "01-ПС) Предоставлять отчет о движении бытовых электроприборов, при необходимости обеспечить поставку необходимых приборов в бригады", "responsible": "И.В. Шуховцева", "manager": "", "datePlan": "", "dateFact": "", "notes": "", "status": "На исполнении", "reporting": "В день выполнения/По запросу", "source": "email"}, {"id": 24, "dateAssigned": "2026-01-19", "task": "01-ПС) Обеспечить рассмотрение АВР в очном формате", "responsible": "В.А. Пойлов", "manager": "", "datePlan": "", "dateFact": "", "notes": "", "status": "На исполнении", "reporting": "В день выполнения/По запросу", "source": "email"}, {"id": 25, "dateAssigned": "2026-01-19", "task": "01-ПС) Обеспечить проведение внутренних расследований по каждому случаю выхода ДВС ПА из строя, с последующим привлечение ответственных работников к дисциплинарной ответственности", "responsible": "Р.В. Левадский", "manager": "", "datePlan": "", "dateFact": "", "notes": "", "status": "На исполнении", "reporting": "В день выполнения/По запросу", "source": "email"}, {"id": 26, "dateAssigned": "2026-01-19", "task": "01-ПС) Своевременно информировать СКС и отдел по снабжению о предстоящих отпусках МОЛ.", "responsible": "М.А. Осипова", "manager": "", "datePlan": "", "dateFact": "", "notes": "", "status": "На исполнении", "reporting": "В день выполнения/По запросу", "source": "email"}, {"id": 27, "dateAssigned": "2026-01-19", "task": "01-ПС) Предоставлять сводку по наличию запаса материалов и оборудования на эл. адреса: директора филиала, главного инженера, зам. директора по производству.", "responsible": "В.С. Песляк", "manager": "", "datePlan": "", "dateFact": "", "notes": "", "status": "На исполнении", "reporting": "В день выполнения/По запросу", "source": "email"}, {"id": 28, "dateAssigned": "2026-01-19", "task": "01-ПС) Предоставлять сводку по наличию запаса материалов и оборудования на эл. адреса: директора филиала, главного инженера, зам. директора по производству.", "responsible": "А.А. Правосуд", "manager": "", "datePlan": "", "dateFact": "", "notes": "", "status": "На исполнении", "reporting": "В день выполнения/По запросу", "source": "email"}, {"id": 29, "dateAssigned": "2026-01-19", "task": "01-ПС) Предоставлять сводку по наличию запаса материалов и оборудования на эл. адреса: директора филиала, главного инженера, зам. директора по производству.", "responsible": "А.А. Гвоздев", "manager": "", "datePlan": "", "dateFact": "", "notes": "", "status": "На исполнении", "reporting": "В день выполнения/По запросу", "source": "email"}, {"id": 30, "dateAssigned": "2026-01-19", "task": "01-ПС) Предоставлять сводку по наличию запаса материалов и оборудования на эл. адреса: директора филиала, главного инженера, зам. директора по производству.", "responsible": "Д.Н. Горшенин", "manager": "", "datePlan": "", "dateFact": "", "notes": "", "status": "На исполнении", "reporting": "В день выполнения/По запросу", "source": "email"}, {"id": 31, "dateAssigned": "2026-01-19", "task": "01-ПС) Обеспечить  наличие пропусков на персонал при смене вахты", "responsible": "В.С. Песляк", "manager": "", "datePlan": "", "dateFact": "", "notes": "", "status": "На исполнении", "reporting": "В день выполнения/По запросу", "source": "email"}, {"id": 32, "dateAssigned": "2026-01-19", "task": "01-ПС) Обеспечить  наличие пропусков на персонал при смене вахты", "responsible": "А.А. Правосуд", "manager": "", "datePlan": "", "dateFact": "", "notes": "", "status": "На исполнении", "reporting": "В день выполнения/По запросу", "source": "email"}, {"id": 33, "dateAssigned": "2026-01-19", "task": "01-ПС) Обеспечить  наличие пропусков на персонал при смене вахты", "responsible": "А.А. Гвоздев", "manager": "", "datePlan": "", "dateFact": "", "notes": "", "status": "На исполнении", "reporting": "В день выполнения/По запросу", "source": "email"}, {"id": 34, "dateAssigned": "2026-01-19", "task": "01-ПС) Обеспечить  наличие пропусков на персонал при смене вахты", "responsible": "Д.Н. Горшенин", "manager": "", "datePlan": "", "dateFact": "", "notes": "", "status": "На исполнении", "reporting": "В день выполнения/По запросу", "source": "email"}, {"id": 35, "dateAssigned": "2026-01-19", "task": "01-ПС) Обеспечить проведение проверки кадрового документооборота", "responsible": "М.А. Осипова", "manager": "", "datePlan": "2026-03-31", "dateFact": "", "notes": "", "status": "На исполнении", "reporting": "В день выполнения/По запросу", "source": "email"}, {"id": 36, "dateAssigned": "2026-01-19", "task": "01-ПС) Обеспечить своевременно направление претензий в адрес ПО оказывающих транспортные услуги, включая невыход ТС на линию.", "responsible": "И.Н. Платков", "manager": "", "datePlan": "", "dateFact": "", "notes": "", "status": "На исполнении", "reporting": "В день выполнения/По запросу", "source": "email"}, {"id": 37, "dateAssigned": "2026-01-21", "task": "СЗ-10039463.26-00223-26) Подготовить информацию по формату \"Матрица ответственности по процессам\"", "responsible": "О.Д. Еремкин", "manager": "", "datePlan": "2026-01-30", "dateFact": "2026-01-30", "notes": "", "status": "Исполнено", "reporting": "В день выполнения/По запросу", "source": "email"}, {"id": 38, "dateAssigned": "2026-01-22", "task": "СЗ-1376.00-07-00221-26) Предоставить информацию по результатам проведенных проверок установки завышенных требований", "responsible": "А.Н. Дербуш", "manager": "", "datePlan": "2026-01-28", "dateFact": "2026-01-29", "notes": "", "status": "На исполнении", "reporting": "В день выполнения/По запросу", "source": "email"}, {"id": 39, "dateAssigned": "2026-01-22", "task": "СЗ-10039463.26-00243-26) Предоставить информацию о проведенной работе по внесению требований к действующим редакциям расходных договоров \"О приоритетном приобретении требований в ОГ Компании\"", "responsible": "И.Н. Платков", "manager": "", "datePlan": "2026-02-02", "dateFact": "2026-02-02", "notes": "", "status": "Исполнено", "reporting": "В день выполнения/По запросу", "source": "email"}, {"id": 40, "dateAssigned": "2026-01-22", "task": "ВН-03/26) Предоставить актуализированные графики ремонта подъемных агрегатов на 2026 год", "responsible": "О.Д. Еремкин", "manager": "", "datePlan": "2026-01-30", "dateFact": "2026-01-30", "notes": "", "status": "Исполнено", "reporting": "В день выполнения/По запросу", "source": "email"}, {"id": 41, "dateAssigned": "2026-01-22", "task": "ВН-03/26) Обеспечить загрузку потребности в КИС САП для инициирования закупочных процедур", "responsible": "А.Н. Дербуш", "manager": "", "datePlan": "2026-01-30", "dateFact": "2026-01-30", "notes": "", "status": "Исполнено", "reporting": "В день выполнения/По запросу", "source": "email"}, {"id": 42, "dateAssigned": "2026-01-22", "task": "Подготовить ответ о возможности использования ДТ \"Арктика\"", "responsible": "О.Д. Еремкин", "manager": "", "datePlan": "2026-01-26", "dateFact": "2026-01-29", "notes": "", "status": "На исполнении", "reporting": "В день выполнения/По запросу", "source": "email"}, {"id": 43, "dateAssigned": "2026-01-22", "task": "Определить способ установки дополнительных холодильников в общежитии г.Нефтеюганск", "responsible": "И.В. Шуховцева", "manager": "", "datePlan": "2026-01-29", "dateFact": "2026-01-29", "notes": "", "status": "Исполнено", "reporting": "В день выполнения/По запросу", "source": "email"}, {"id": 44, "dateAssigned": "2026-01-23", "task": "Подготовить схему взаимодействия между зазачиком и ПО при предъявлении, проверке и оплате простоев по ставки \"простои по вине заказчика\", по причинам \"превышение ТЗ на перезд\" и \"превышение ТЗ по технике для глушения\".", "responsible": "М.М. Алимжанов", "manager": "", "datePlan": "2026-01-26", "dateFact": "2026-01-29", "notes": "", "status": "На исполнении", "reporting": "В день выполнения/По запросу", "source": "email"}, {"id": 45, "dateAssigned": "2026-01-23", "task": "Подготовить письмо в адрес заказчика о согласовании пропусков для иностранцев на срок действия патента.", "responsible": "Р.А. Хоменко", "manager": "", "datePlan": "2026-01-26", "dateFact": "2026-01-26", "notes": "", "status": "Исполнено", "reporting": "В день выполнения/По запросу", "source": "email"}, {"id": 46, "dateAssigned": "2026-01-23", "task": "Предоставлять отчетность о проведении проверок 3-го этапа с результатам привлечения к дисциплинарной ответственности", "responsible": "Р.Г. Осипова", "manager": "", "datePlan": "", "dateFact": "", "notes": "", "status": "На исполнении", "reporting": "В день выполнения/По запросу", "source": "email"}, {"id": 47, "dateAssigned": "2026-01-23", "task": "Обеспечить перевод на должности бурильщиков, работников предложенных начальниками ЦТКРС-1,2 (5 человек)", "responsible": "М.А. Осипова", "manager": "", "datePlan": "2026-02-20", "dateFact": "2026-02-20", "notes": "ЦТКРС №2 свободная вахта по 08.02.2026\nЦТКРС №1 перевод с 30.01.2026\nКасимов Х.С., Джамалдинов М.В., Нишонов А.Ф.", "status": "Исполнено", "reporting": "В день выполнения/По запросу", "source": "email"}, {"id": 48, "dateAssigned": "2026-01-23", "task": "Обеспечить ведение отчетности по бурильщикам", "responsible": "М.А. Осипова", "manager": "", "datePlan": "", "dateFact": "", "notes": "", "status": "На исполнении", "reporting": "В день выполнения/По запросу", "source": "email"}, {"id": 49, "dateAssigned": "2026-02-03", "task": "СЗ-10039463.47-00719-26/ Направить отчет по анкетированию (СИЗ рук)", "responsible": "В.А. Пойлов", "manager": "", "datePlan": "2026-02-13", "dateFact": "2026-02-13", "notes": "", "status": "Исполнено", "reporting": "В день выполнения/По запросу", "source": "email"}, {"id": 50, "dateAssigned": "2026-02-04", "task": "Направить ПКМ по трубным участкам в РН-ЮНГ", "responsible": "В.А. Пойлов", "manager": "", "datePlan": "2026-02-16", "dateFact": "2026-02-16", "notes": "", "status": "Исполнено", "reporting": "В день выполнения/По запросу", "source": "email"}, {"id": 51, "dateAssigned": "2026-02-13", "task": "05-К/ Инициировать закупочную процедуру на оказание услуги по ведению документооборота при регистрации иностранных граждан", "responsible": "М.А. Осипова", "manager": "", "datePlan": "2026-03-13", "dateFact": "", "notes": "", "status": "На исполнении", "reporting": "В день выполнения/По запросу", "source": "email"}, {"id": 52, "dateAssigned": "2026-02-13", "task": "05-К/ Подготовить обоснование по сокращению сотрудников ЦТКРС-2", "responsible": "И.В. Богачев", "manager": "", "datePlan": "2026-02-27", "dateFact": "2026-02-27", "notes": "", "status": "Исполнено", "reporting": "В день выполнения/По запросу", "source": "email"}, {"id": 53, "dateAssigned": "2026-02-16", "task": "06-ПС/ Обеспечить постановку на баланс всех кран-балок используемых в филиале", "responsible": "Д.А. Строгалев", "manager": "", "datePlan": "2026-04-30", "dateFact": "", "notes": "", "status": "На исполнении", "reporting": "В день выполнения/По запросу", "source": "email"}, {"id": 54, "dateAssigned": "2026-02-16", "task": "06-ПС/ Организовать проведение совещания по рассмотрению причины деформации мачты ПА ЦТКРС-1", "responsible": "В.А. Пойлов", "manager": "", "datePlan": "2026-02-25", "dateFact": "2026-03-06", "notes": "", "status": "На исполнении", "reporting": "В день выполнения/По запросу", "source": "email"}, {"id": 55, "dateAssigned": "2026-02-16", "task": "06-ПС/ Разместить процедуру закупки на оказание услуг по освидетельствованию кислородных баллонов", "responsible": "Д.А. Строгалев", "manager": "", "datePlan": "2026-02-24", "dateFact": "2026-02-24", "notes": "", "status": "Исполнено", "reporting": "В день выполнения/По запросу", "source": "email"}, {"id": 56, "dateAssigned": "2026-02-17", "task": "Организовать комиссионную консервацию зданий и сооружений п.Надежда", "responsible": "О.Д. Еремкин", "manager": "", "datePlan": "2026-04-30", "dateFact": "", "notes": "", "status": "На исполнении", "reporting": "В день выполнения/По запросу", "source": "email"}, {"id": 57, "dateAssigned": "2026-02-17", "task": "Закрепить распоряжением ответственность за осмотр и своевременное информирование о существущих рисках сохранности имущества п.Надежда", "responsible": "О.Д. Еремкин", "manager": "", "datePlan": "2026-02-25", "dateFact": "2026-02-26", "notes": "", "status": "На исполнении", "reporting": "В день выполнения/По запросу", "source": "email"}, {"id": 58, "dateAssigned": "2026-02-17", "task": "Полноценно вовлечить охрану в процесс контроля, организовать ежедневные доклады по сохранности имущества п.Надежда", "responsible": "А.О. Каминский", "manager": "", "datePlan": "", "dateFact": "", "notes": "", "status": "На исполнении", "reporting": "В день выполнения/По запросу", "source": "email"}, {"id": 59, "dateAssigned": "2026-02-17", "task": "ВН-09/26/ Обеспечить проведение предупредительных мероприятий ГНВП", "responsible": "В.А. Пойлов", "manager": "", "datePlan": "2026-02-25", "dateFact": "2026-02-25", "notes": "", "status": "Исполнено", "reporting": "В день выполнения/По запросу", "source": "email"}, {"id": 60, "dateAssigned": "2026-02-17", "task": "Вн-09/26/ Разработать мероприятия по вовлечению запасов МТР со сроком хранение свыше 3-х лет", "responsible": "А.Н. Дербуш", "manager": "", "datePlan": "2026-02-26", "dateFact": "2026-02-26", "notes": "", "status": "Исполнено", "reporting": "В день выполнения/По запросу", "source": "email"}, {"id": 61, "dateAssigned": "2026-02-17", "task": "ВН-09/26/ Подготовить доклад о текущей ситуации по взаимодействию в системе ЕЦУД в Нефтеюганске", "responsible": "И.Н. Платков", "manager": "", "datePlan": "2026-02-26", "dateFact": "2026-03-03", "notes": "", "status": "На исполнении", "reporting": "В день выполнения/По запросу", "source": "email"}, {"id": 62, "dateAssigned": "2026-02-20", "task": "Подготовить план проведения комплексной проверки соблюдения требований БДД в филиале", "responsible": "В.А. Пойлов", "manager": "", "datePlan": "2026-02-24", "dateFact": "", "notes": "", "status": "На исполнении", "reporting": "В день выполнения/По запросу", "source": "email"}, {"id": 63, "dateAssigned": "2026-02-20", "task": "Провести анализ (сплошную проверку) отнесения должностей по функциям к категориям (АУП/ПП/ВП); (Офис/Не офис). В случае необходимости внести изменения в САП", "responsible": "Н.А. Гуревич", "manager": "", "datePlan": "2026-03-02", "dateFact": "2026-02-24", "notes": "Проведен анализ в программе SAP отнесения должностей офис/не офис.\nВнесены изменения  вед специалисту по контролю за транспортом ЦИТС – офис.\nВсе остальные должности соответствуют.", "status": "Исполнено", "reporting": "В день выполнения/По запросу", "source": "email"}, {"id": 64, "dateAssigned": "2026-02-20", "task": "Провести анализ и подготовить предложения об исключении вакансий по должностям АУП/Офис (не требующие изменения организационных структур)", "responsible": "Н.А. Гуревич", "manager": "", "datePlan": "2026-04-01", "dateFact": "2026-02-24", "notes": "с 01.03.2026 вывод 17 вакансий\nв том числе:\nАУП – 3 ед.\nВП – 12 ед.\nПП – 2 ед.\nОфис – 7 ед.", "status": "Исполнено", "reporting": "В день выполнения/По запросу", "source": "email"}, {"id": 65, "dateAssigned": "2026-02-20", "task": "Провести анализ действующих условий организации работы АУП и офисных работников по функциональным направлениям на предмет возможной централизации или оптимизации функций (в рамках филиала)", "responsible": "Н.А. Гуревич", "manager": "", "datePlan": "2026-07-01", "dateFact": "", "notes": "", "status": "На исполнении", "reporting": "В день выполнения/По запросу", "source": "email"}, {"id": 66, "dateAssigned": "2026-03-10", "task": "12-П/Обеспечить разработку и контроль реализации мероприятий по снижению рисков подтопления подвального помещения АБК по адресу: Индустриальная, 97", "responsible": "А.В. Демидова", "manager": "", "datePlan": "2026-04-15", "dateFact": "", "notes": "", "status": "На исполнении", "reporting": "В день выполнения/По запросу", "source": "email"}, {"id": 67, "dateAssigned": "2026-03-11", "task": "Разместить закупочную процедуру на поставку стального каната", "responsible": "А.Н. Дербуш", "manager": "", "datePlan": "2026-03-12", "dateFact": "2026-03-12", "notes": "", "status": "Исполнено", "reporting": "В день выполнения/По запросу", "source": "email"}, {"id": 68, "dateAssigned": "2026-03-31", "task": "Обеспечить подготовку и утверждение документов согласно Перечню по оповещению граждан", "responsible": "А.В. Шиманова", "manager": "", "datePlan": "2026-04-10", "dateFact": "", "notes": "", "status": "На исполнении", "reporting": "В день выполнения/По запросу", "source": "email"}, {"id": 69, "dateAssigned": "2026-03-31", "task": "Сформировать в филиале документы по оповещению граждан пребывающих в запасе", "responsible": "А.В. Шиманова", "manager": "", "datePlan": "2026-04-10", "dateFact": "", "notes": "", "status": "На исполнении", "reporting": "В день выполнения/По запросу", "source": "email"}, {"id": 70, "dateAssigned": "2026-03-31", "task": "Предоставить отчет об утверждении документов по оповещению граждан", "responsible": "А.В. Шиманова", "manager": "", "datePlan": "2026-04-15", "dateFact": "", "notes": "", "status": "На исполнении", "reporting": "В день выполнения/По запросу", "source": "email"}, {"id": 71, "dateAssigned": "2026-04-02", "task": "Вх.592/Завершить ЗП в КИМ", "responsible": "А.Н. Дербуш", "manager": "", "datePlan": "2026-04-08", "dateFact": "", "notes": "", "status": "На исполнении", "reporting": "", "source": "email"}];
+    const nyg = [{"id": 1, "dateAssigned": "2026-03-04", "task": "Подключение полномочий подписания документов филиала в г.Нягань для пользователя enzavolokin", "responsible": "М.Ю. Кокшаров", "manager": "", "datePlan": "2026-03-10", "dateFact": "2026-03-10", "notes": "", "status": "Исполнено", "reporting": "В день выполнения/По запросу", "source": "email"}, {"id": 2, "dateAssigned": "2026-03-05", "task": "Инициировать закупочную процедуру на ремонт ДВС", "responsible": "А.А. Неугомонов", "manager": "", "datePlan": "2026-04-09", "dateFact": "", "notes": "", "status": "На исполнении", "reporting": "", "source": "email"}, {"id": 3, "dateAssigned": "2026-03-05", "task": "Вынести на рассмотрение ЗК УСУ по лоту \"Ремонт вагон-домов\"", "responsible": "А.А. Неугомонов", "manager": "", "datePlan": "2026-04-09", "dateFact": "", "notes": "", "status": "На исполнении", "reporting": "", "source": "email"}, {"id": 4, "dateAssigned": "2026-03-05", "task": "Вынести на рассмотрение ЗК вопрос изменения существенных условий по лотам на оказание транспортных услуг (4 договора)", "responsible": "Ю.К. Кара", "manager": "", "datePlan": "2026-03-12", "dateFact": "2026-03-12", "notes": "", "status": "Исполнено", "reporting": "", "source": "email"}, {"id": 5, "dateAssigned": "2026-03-11", "task": "СЗ-ВС-00299-26/ Организовать работу по сдерживанию затрат. Направить отчет", "responsible": "С.В. Конышева", "manager": "", "datePlan": "2026-03-19", "dateFact": "2026-03-19", "notes": "", "status": "Исполнено", "reporting": "", "source": "email"}, {"id": 6, "dateAssigned": "2026-03-30", "task": "СЗ-10039463.26-01875-26/ Предоставить сведения о планируемых на 2026 год объемах ЭПБ", "responsible": "А.А. Неугомонов", "manager": "", "datePlan": "2026-04-10", "dateFact": "", "notes": "", "status": "На исполнении", "reporting": "", "source": "email"}, {"id": 7, "dateAssigned": "2026-03-30", "task": "СЗ-10039463.26-01875-26/ Направить информацию о факте проведения ЭПБ", "responsible": "А.А. Неугомонов", "manager": "", "datePlan": "2026-07-10", "dateFact": "", "notes": "", "status": "На исполнении", "reporting": "", "source": "email"}, {"id": 8, "dateAssigned": "2026-03-30", "task": "СЗ-10039463.26-01875-26/ Направить информацию о факте проведения ЭПБ", "responsible": "А.А. Неугомонов", "manager": "", "datePlan": "2026-10-09", "dateFact": "", "notes": "", "status": "На исполнении", "reporting": "", "source": "email"}, {"id": 9, "dateAssigned": "2026-03-30", "task": "СЗ-10039463.26-01875-26/ Направить прогноз проведения ЭПБ за 2026 год", "responsible": "А.А. Неугомонов", "manager": "", "datePlan": "2026-12-11", "dateFact": "", "notes": "", "status": "На исполнении", "reporting": "", "source": "email"}, {"id": 10, "dateAssigned": "2026-03-30", "task": "СЗ-10039463.26-01875-26/ Направить факт проведения ЭПБ за 2026 год", "responsible": "А.А. Неугомонов", "manager": "", "datePlan": "2027-01-15", "dateFact": "", "notes": "", "status": "На исполнении", "reporting": "", "source": "email"}, {"id": 11, "dateAssigned": "2026-03-30", "task": "СЗ-10039463.26-01875-26/ Направить данные по ЭПБ согласно прилагаемых форматов", "responsible": "А.А. Неугомонов", "manager": "", "datePlan": "2026-04-10", "dateFact": "", "notes": "", "status": "На исполнении", "reporting": "", "source": "email"}, {"id": 12, "dateAssigned": "2026-04-02", "task": "Вх.417/ Подготовить ответ о проведенной работе", "responsible": "Н.В. Муравьева", "manager": "", "datePlan": "2026-04-10", "dateFact": "", "notes": "", "status": "На исполнении", "reporting": "", "source": "email"}, {"id": 13, "dateAssigned": "2026-04-02", "task": "Вх.415/ Подготовить план мероприятий по выводу бригад", "responsible": "А.А. Неугомонов", "manager": "", "datePlan": "2026-04-06", "dateFact": "", "notes": "", "status": "На исполнении", "reporting": "", "source": "email"}, {"id": 14, "dateAssigned": "2026-04-02", "task": "Вх.416/ Подготовить ответ о проведенной работе", "responsible": "Н.В. Муравьева", "manager": "2026-04-10 00:00:00", "datePlan": "2026-04-10", "dateFact": "", "notes": "", "status": "На исполнении", "reporting": "", "source": "email"}];
+    // Only seed if no existing data
+    if (!localStorage.getItem('tasks_nvt') || localStorage.getItem('tasks_nvt') === '[]') {
+      localStorage.setItem('tasks_nvt', JSON.stringify(nvt));
+    }
+    if (!localStorage.getItem('tasks_nyg') || localStorage.getItem('tasks_nyg') === '[]') {
+      localStorage.setItem('tasks_nyg', JSON.stringify(nyg));
+    }
+    localStorage.setItem(SEED_KEY, '1');
+  }
+})();
+</script>
+</head>
+<body>
+
+<!-- ══════════════════ HEADER ══════════════════ -->
+<div class="hdr">
+  <div class="hdr-top">
+    <div class="hdr-logo">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/>
+        <rect x="9" y="3" width="6" height="4" rx="1"/>
+        <path d="M9 12h6M9 16h4"/>
+      </svg>
+      <div>
+        <div class="hdr-title">Контроль поручений</div>
+        <div class="hdr-subtitle" id="branchSub">Нижневартовск</div>
+      </div>
+    </div>
+
+    <!-- Branch switcher -->
+    <div class="branch-sw" role="group" aria-label="Выбор филиала">
+      <button class="branch-btn on" id="btn-nvt" onclick="switchBranch('nvt')">🏙 Нижневартовск</button>
+      <button class="branch-btn" id="btn-nyg" onclick="switchBranch('nyg')">🏙 Нягань</button>
+    </div>
+
+    <!-- Year selector -->
+    <div style="margin-left:auto; display:flex; align-items:center; gap:8px;">
+      <select id="yearSel" class="fi" style="margin:0; background:rgba(255,255,255,.15); color:#fff; border-color:rgba(255,255,255,.3); font-weight:600; min-width:90px;" onchange="renderAll()">
+        <option value="2026">2026</option>
+        <option value="2025">2025</option>
+        <option value="2024">2024</option>
+        <option value="2023">2023</option>
+        <option value="all">Все годы</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-row" id="statsRow"></div>
+</div>
+
+<!-- ══════════════════ TABS ══════════════════ -->
+<div class="tabs">
+  <button class="tb on" onclick="showTab('tasks',this)">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>
+    Поручения
+  </button>
+  <button class="tb" onclick="showTab('add',this)">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+    Добавить
+  </button>
+  <button class="tb" onclick="showTab('data',this)">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+    Импорт / Экспорт
+  </button>
+</div>
+
+<!-- ══════════════════ CONTENT ══════════════════ -->
+<div class="page">
+
+  <!-- ─── TAB: TASKS ─── -->
+  <div id="tab-tasks" class="tc on">
+    <div class="fbar">
+      <input class="fi fi-search" id="srch" placeholder="🔍 Поиск по тексту, ответственному..." oninput="renderAll()">
+      <!-- Мультивыбор статусов -->
+      <div class="msel-wrap" id="stFWrap">
+        <button class="msel-btn fi" id="stFBtn" onclick="toggleStDropdown(event)" type="button">
+          <span id="stFLabel">Все статусы</span>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-left:6px;flex-shrink:0"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+        <div class="msel-drop" id="stFDrop">
+          <label class="msel-opt"><input type="checkbox" value="На исполнении" onchange="onStChange()"><span class="msel-dot b-work-dot"></span>На исполнении</label>
+          <label class="msel-opt"><input type="checkbox" value="Просрочено" onchange="onStChange()"><span class="msel-dot b-over-dot"></span>Просрочено</label>
+          <label class="msel-opt"><input type="checkbox" value="Выполнено с нарушением срока" onchange="onStChange()"><span class="msel-dot b-late-dot"></span>Выполнено с нарушением срока</label>
+          <label class="msel-opt"><input type="checkbox" value="Исполнено" onchange="onStChange()"><span class="msel-dot b-done-dot"></span>Исполнено</label>
+          <label class="msel-opt"><input type="checkbox" value="Снято с контроля" onchange="onStChange()"><span class="msel-dot b-drop-dot"></span>Снято с контроля</label>
+          <div class="msel-footer">
+            <button class="msel-clr" onclick="clearStFilter()">Сбросить</button>
+          </div>
+        </div>
+      </div>
+      <select class="fi" id="mnF" onchange="renderAll()">
+        <option value="">Все месяцы</option>
+        <option value="1">Январь</option><option value="2">Февраль</option>
+        <option value="3">Март</option><option value="4">Апрель</option>
+        <option value="5">Май</option><option value="6">Июнь</option>
+        <option value="7">Июль</option><option value="8">Август</option>
+        <option value="9">Сентябрь</option><option value="10">Октябрь</option>
+        <option value="11">Ноябрь</option><option value="12">Декабрь</option>
+      </select>
+      <select class="fi" id="respF" onchange="onRespFilter()">
+        <option value="">Все исполнители</option>
+      </select>
+      <button class="btn btn-s" id="infToggleBtn" onclick="toggleInfographic()" style="white-space:nowrap; font-size:12px;">
+        📊 По исполнителям
+      </button>
+      <button class="btn btn-s" onclick="printTable()" style="white-space:nowrap; font-size:12px;" title="Распечатать или сохранить как PDF">
+        🖨 Печать / PDF
+      </button>
+    </div>
+
+    <!-- INFOGRAPHIC PANEL -->
+    <div class="inf-panel" id="infPanel" style="display:none;">
+      <div class="inf-header">
+        <span class="inf-title">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--c1)" stroke-width="2"><rect x="3" y="12" width="4" height="9"/><rect x="10" y="7" width="4" height="14"/><rect x="17" y="3" width="4" height="18"/></svg>
+          Загрузка по исполнителям
+        </span>
+        <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+          <div class="inf-legend">
+            <span class="inf-leg-item"><span class="inf-leg-dot" style="background:#f87171"></span>Просрочено</span>
+            <span class="inf-leg-item"><span class="inf-leg-dot" style="background:#fbbf24"></span>В работе</span>
+            <span class="inf-leg-item"><span class="inf-leg-dot" style="background:#34d399"></span>Исполнено</span>
+          </div>
+          <button class="inf-clear" id="infClearBtn" onclick="clearRespFilter()">✕ Сбросить фильтр</button>
+        </div>
+      </div>
+      <div class="inf-body" id="infBody"></div>
+    </div>
+
+    <!-- Заголовок только для печати -->
+    <div class="print-header" id="printHeader">
+      <h2 id="printTitle">Контроль поручений</h2>
+      <p id="printMeta"></p>
+    </div>
+
+    <div class="tbl-card">
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:44px">№</th>
+              <th class="sortable" id="th-date" style="width:90px" onclick="sortByCol('dateAssigned')">Дата</th>
+              <th>Поручение</th>
+              <th class="sortable" id="th-resp" style="width:150px" onclick="sortByCol('responsible')">Ответственный</th>
+              <th class="sortable" id="th-plan" style="width:100px" onclick="sortByCol('datePlan')">Срок</th>
+              <th style="width:66px">Дней</th>
+              <th class="sortable" id="th-status" style="width:140px" onclick="sortByCol('status')">Статус</th>
+              <th style="width:70px"></th>
+            </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+    </div>
+    <div id="emptyState" class="empty" style="display:none">
+      <div class="empty-ico">📭</div>
+      <div class="empty-txt">Поручений не найдено</div>
+      <div class="empty-sub">Попробуйте изменить фильтры или добавьте новое поручение</div>
+    </div>
+  </div>
+
+  <!-- ─── TAB: ADD ─── -->
+  <div id="tab-add" class="tc">
+    <div class="stabs">
+      <button class="stb on" onclick="showSub('manual',this)">✍️ Вручную</button>
+      <button class="stb" onclick="showSub('text',this)">📄 Из текста / письма</button>
+      <button class="stb" onclick="showSub('photo',this)">📷 Из фото</button>
+    </div>
+
+    <!-- MANUAL -->
+    <div id="sub-manual">
+      <div class="card">
+        <div class="card-title">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--c1)" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          Новое поручение
+        </div>
+        <div class="card-desc">Введите данные вручную — для устных поручений или когда текст уже под рукой</div>
+        <div class="fg">
+          <div class="fld" style="grid-column:1/-1">
+            <label>Текст поручения *</label>
+            <textarea class="fc" id="f-task" placeholder="Введите текст поручения..."></textarea>
+          </div>
+          <div class="fld">
+            <label>Ответственный</label>
+            <input class="fc" id="f-resp" placeholder="Фамилия И.О.">
+          </div>
+          <div class="fld">
+            <label>Руководитель</label>
+            <input class="fc" id="f-mgr" placeholder="Фамилия И.О.">
+          </div>
+          <div class="fld">
+            <label>Дата поручения</label>
+            <input class="fc" type="date" id="f-date">
+          </div>
+          <div class="fld">
+            <label>Срок исполнения (план)</label>
+            <input class="fc" type="date" id="f-plan">
+          </div>
+          <div class="fld">
+            <label>Источник</label>
+            <select class="fc" id="f-src">
+              <option value="verbal">🗣️ Устно</option>
+              <option value="email">📧 Email</option>
+              <option value="protocol">📄 Протокол совещания</option>
+              <option value="other">Другое</option>
+            </select>
+          </div>
+          <div class="fld">
+            <label>Отчётность</label>
+            <input class="fc" id="f-rep" placeholder="По запросу / В день выполнения">
+          </div>
+          <div class="fld" style="grid-column:1/-1">
+            <label>Примечание</label>
+            <input class="fc" id="f-note" placeholder="Дополнительная информация...">
+          </div>
+        </div>
+        <div style="display:flex; gap:10px; margin-top:18px; flex-wrap:wrap;">
+          <button class="btn btn-p" onclick="addManual()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>
+            Добавить поручение
+          </button>
+          <button class="btn btn-s" onclick="clearManual()">Очистить форму</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- FROM TEXT -->
+    <div id="sub-text" style="display:none">
+      <div class="card">
+        <div class="card-title">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--c1)" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+          Из текста письма или протокола
+        </div>
+        <div class="card-desc">Вставьте любой текст — приложение само найдёт поручения, ответственных и сроки</div>
+        <textarea class="fc" id="txtIn" style="min-height:170px; width:100%;"
+          placeholder="Вставьте текст письма, протокола совещания или любого документа...&#10;&#10;Пример:&#10;1. Обеспечить подготовку отчёта за квартал. Ответственный: Иванов А.В. Срок: 15.04.2026&#10;2. Провести совещание по производственным показателям. Ответственный: Петров С.И. До: 01.05.2026"></textarea>
+        <div style="display:flex; gap:10px; margin-top:12px;">
+          <button class="btn btn-p" onclick="parseAndShow('txt')">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+            Найти поручения
+          </button>
+          <button class="btn btn-s" onclick="document.getElementById('txtIn').value='';document.getElementById('txtRes').innerHTML=''">Очистить</button>
+        </div>
+        <div id="txtRes"></div>
+      </div>
+    </div>
+
+    <!-- FROM PHOTO -->
+    <div id="sub-photo" style="display:none">
+      <div class="card">
+        <div class="card-title">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--c1)" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+          Из фото письма или документа
+        </div>
+        <div class="card-desc">Сфотографируйте бумажное письмо или распоряжение — OCR распознает текст и выделит поручения</div>
+
+        <div class="dz" id="dz" onclick="document.getElementById('photoIn').click()"
+          ondragover="dzO(event)" ondragleave="dzL(event)" ondrop="dzD(event)">
+          <div class="dz-ico">📷</div>
+          <p><strong>Нажмите или перетащите фото сюда</strong></p>
+          <p style="margin-top:6px; color:var(--g400);">JPG, PNG, WEBP — любые изображения</p>
+        </div>
+        <input type="file" id="photoIn" accept="image/*" style="display:none" onchange="photoC(event)">
+
+        <div id="photoPv" style="display:none">
+          <img id="pvImg" class="imgpv">
+          <div class="ocr-st" id="ocrSt">
+            <span>📄</span> <span id="ocrStTxt">Фото загружено. Нажмите «Распознать текст».</span>
+          </div>
+          <div class="pbar" id="pbar"><div class="pfill" id="pfill" style="width:0"></div></div>
+          <div style="display:flex; gap:10px; margin-top:14px; flex-wrap:wrap;">
+            <button class="btn btn-p" id="ocrBtn" onclick="runOCR()">🔍 Распознать текст</button>
+            <button class="btn btn-s" onclick="clrPhoto()">Выбрать другое фото</button>
+          </div>
+        </div>
+
+        <div id="ocrWrap" style="display:none; margin-top:18px;">
+          <div class="divider"></div>
+          <p style="font-size:13px; font-weight:600; color:var(--g600); margin-bottom:8px;">Распознанный текст — проверьте и при необходимости скорректируйте:</p>
+          <textarea class="fc" id="ocrTxt" style="min-height:120px; width:100%;"></textarea>
+          <button class="btn btn-p" style="margin-top:12px;" onclick="parseAndShow('ocr')">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+            Найти поручения в тексте
+          </button>
+        </div>
+        <div id="photoRes"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── TAB: DATA ─── -->
+  <div id="tab-data" class="tc">
+    <div class="io2">
+      <div class="card">
+        <div class="card-title">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ok)" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+          Импорт из Excel
+        </div>
+        <div class="card-desc">Загрузите существующие файлы контроля поручений (.xlsx)</div>
+        <div class="dz" style="padding:24px;" onclick="document.getElementById('xlsxIn').click()">
+          <div style="font-size:36px; margin-bottom:10px;">📊</div>
+          <p><strong>Нажмите для выбора файла</strong></p>
+          <p style="font-size:12px; margin-top:4px; color:var(--g400);">.xlsx, .xls</p>
+        </div>
+        <input type="file" id="xlsxIn" accept=".xlsx,.xls" style="display:none" onchange="importXLSX(event)">
+        <div id="importSt" style="margin-top:12px; font-size:13px; color:var(--g600);"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--c1)" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+          Экспорт в Excel
+        </div>
+        <div class="card-desc">Сохранить текущие поручения активного филиала в Excel-файл</div>
+        <div style="display:flex; flex-direction:column; gap:10px;">
+          <button class="btn btn-g" onclick="exportXLSX('all')">📊 Экспорт всех поручений</button>
+          <button class="btn btn-s" onclick="exportXLSX('active')">Только активные / просроченные</button>
+          <button class="btn btn-s" onclick="exportXLSX('year')">Только выбранный год</button>
+        </div>
+        <div id="exportSt" style="margin-top:12px; font-size:13px; color:var(--g600);"></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--g600)" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
+        Управление данными
+      </div>
+      <div class="card-desc">Данные хранятся локально в браузере. Делайте резервные копии регулярно.</div>
+      <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:14px;">
+        <span style="font-size:13px; color:var(--g600);">В базе поручений:</span>
+        <span id="totalCount" style="font-size:15px; font-weight:700; color:var(--c1);">0</span>
+        <span id="branchCountBadge" style="font-size:13px; color:var(--g400);"></span>
+      </div>
+      <div style="display:flex; gap:10px; flex-wrap:wrap;">
+        <button class="btn btn-s" onclick="exportJSON()">💾 Резервная копия (JSON)</button>
+        <button class="btn btn-s" onclick="document.getElementById('jsonIn').click()">📂 Восстановить из копии</button>
+        <button class="btn btn-r" style="margin-left:auto;" onclick="clrAll()">🗑️ Очистить данные филиала</button>
+      </div>
+      <input type="file" id="jsonIn" accept=".json" style="display:none" onchange="importJSON(event)">
+    </div>
+  </div>
+
+</div><!-- /page -->
+
+<!-- ══════════════════ MODAL: EDIT ══════════════════ -->
+<div class="mover" id="editModal" onclick="mClose(event)">
+  <div class="mdl">
+    <div class="mdl-title">✏️ Редактировать поручение</div>
+    <input type="hidden" id="e-id">
+    <div class="fg">
+      <div class="fld" style="grid-column:1/-1">
+        <label>Текст поручения</label>
+        <textarea class="fc" id="e-task" style="min-height:80px;"></textarea>
+      </div>
+      <div class="fld"><label>Ответственный</label><input class="fc" id="e-resp"></div>
+      <div class="fld"><label>Руководитель</label><input class="fc" id="e-mgr"></div>
+      <div class="fld"><label>Дата поручения</label><input class="fc" type="date" id="e-date"></div>
+      <div class="fld"><label>Срок (план)</label><input class="fc" type="date" id="e-plan"></div>
+      <div class="fld"><label>Дата исполнения</label><input class="fc" type="date" id="e-fact"></div>
+      <div class="fld">
+        <label>Статус</label>
+        <select class="fc" id="e-status">
+          <option value="На исполнении">На исполнении</option>
+          <option value="Исполнено">Исполнено</option>
+          <option value="Снято с контроля">Снято с контроля</option>
+        </select>
+      </div>
+      <div class="fld">
+        <label>Источник</label>
+        <select class="fc" id="e-src">
+          <option value="email">📧 Email</option>
+          <option value="protocol">📄 Протокол</option>
+          <option value="verbal">🗣️ Устно</option>
+          <option value="photo">📷 Фото</option>
+          <option value="other">Другое</option>
+        </select>
+      </div>
+      <div class="fld"><label>Отчётность</label><input class="fc" id="e-rep"></div>
+      <div class="fld" style="grid-column:1/-1">
+        <label>Примечание</label>
+        <textarea class="fc" id="e-note" style="min-height:60px;"></textarea>
+      </div>
+    </div>
+    <div class="mac">
+      <button class="btn btn-s" onclick="document.getElementById('editModal').classList.remove('on')">Отмена</button>
+      <button class="btn btn-p" onclick="saveEdit()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>
+        Сохранить
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ NOTIFICATION ══════════════════ -->
+<div class="ntf ntf-ok" id="ntf">
+  <span id="ntfIco">✓</span>
+  <span id="ntfMsg"></span>
+</div>
+
+<!-- ══════════════════ SCRIPT ══════════════════ -->
+<script>
+// ═══════════════════════════════════════════════════
+// BRANCH & STORAGE
+// ═══════════════════════════════════════════════════
+const BRANCHES = {
+  nvt: { name: 'Нижневартовск', short: 'НВТ', key: 'tasks_nvt' },
+  nyg: { name: 'Нягань',        short: 'НЯГ', key: 'tasks_nyg' },
+};
+let currentBranch = localStorage.getItem('activeBranch') || 'nvt';
+let tasks = [];
+
+function skKey() { return BRANCHES[currentBranch].key; }
+
+function loadTasks() {
+  try { tasks = JSON.parse(localStorage.getItem(skKey())) || []; } catch(e) { tasks = []; }
+}
+function saveTasks() {
+  localStorage.setItem(skKey(), JSON.stringify(tasks));
+  renderAll();
+}
+function nxtId() { return tasks.length ? Math.max(...tasks.map(t => t.id)) + 1 : 1; }
+
+function switchBranch(b) {
+  if (b === currentBranch) return;
+  currentBranch = b;
+  localStorage.setItem('activeBranch', b);
+  loadTasks();
+  applyBranchUI();
+  renderAll();
+  ntf(`Переключено: ${BRANCHES[b].name}`, false, '🏙');
+}
+
+function applyBranchUI() {
+  const b = BRANCHES[currentBranch];
+  // Header subtitle
+  document.getElementById('branchSub').textContent = b.name;
+  // Body class for color theming
+  document.body.classList.toggle('branch-nyagan', currentBranch === 'nyg');
+  // Button states
+  document.getElementById('btn-nvt').classList.toggle('on', currentBranch === 'nvt');
+  document.getElementById('btn-nyg').classList.toggle('on', currentBranch === 'nyg');
+}
+
+// ═══════════════════════════════════════════════════
+// STATUS & COMPUTED
+// ═══════════════════════════════════════════════════
+function calcStatus(t) {
+  if (t.status === 'Снято с контроля') return 'Снято с контроля';
+  if (t.status === 'Исполнено') {
+    // Выполнено, но позже плановой даты
+    if (t.datePlan && t.dateFact && t.dateFact > t.datePlan) return 'Выполнено с нарушением срока';
+    return 'Исполнено';
+  }
+  // Не выполнено — проверяем просрочку
+  if (t.datePlan) {
+    const tod = new Date(); tod.setHours(0,0,0,0);
+    if (new Date(t.datePlan) < tod) return 'Просрочено';
+  }
+  return 'На исполнении';
+}
+function calcDays(t) {
+  const s = t.dateAssigned ? new Date(t.dateAssigned) : new Date();
+  const e = t.dateFact ? new Date(t.dateFact) : new Date();
+  return Math.max(0, Math.round((e - s) / 864e5));
+}
+
+// ═══════════════════════════════════════════════════
+// RENDER
+// ═══════════════════════════════════════════════════
+function fmtD(d) {
+  if (!d) return '—';
+  const x = new Date(d);
+  return `${String(x.getDate()).padStart(2,'0')}.${String(x.getMonth()+1).padStart(2,'0')}.${x.getFullYear()}`;
+}
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+function srcTag(s) {
+  const m = { email:['st-email','📧 Email'], protocol:['st-protocol','📄 Протокол'], verbal:['st-verbal','🗣️ Устно'], photo:['st-photo','📷 Фото'] };
+  if (!s || !m[s]) return '';
+  return `<span class="stag ${m[s][0]}">${m[s][1]}</span>`;
+}
+const BCLS = { 'На исполнении':'b-work', 'Исполнено':'b-done', 'Просрочено':'b-over', 'Выполнено с нарушением срока':'b-late', 'Снято с контроля':'b-drop' };
+
+// ── ПЕЧАТЬ ───────────────────────────────────────
+function printTable() {
+  const b = BRANCHES[currentBranch].name;
+  const yr = document.getElementById('yearSel').value;
+  const selSt = getSelStatuses();
+  const mnF = document.getElementById('mnF').value;
+  const srch = document.getElementById('srch').value;
+  const MONTHS = ['','январь','февраль','март','апрель','май','июнь','июль','август','сентябрь','октябрь','ноябрь','декабрь'];
+
+  let meta = `Филиал: ${b} · Год: ${yr === 'all' ? 'все' : yr}`;
+  if (selSt.length) meta += ` · Статус: ${selSt.join(', ')}`;
+  if (mnF) meta += ` · Месяц: ${MONTHS[+mnF]}`;
+  if (srch) meta += ` · Поиск: «${srch}»`;
+  meta += ` · Дата: ${new Date().toLocaleDateString('ru')}`;
+
+  document.getElementById('printTitle').textContent = `Контроль поручений — ${b}`;
+  document.getElementById('printMeta').textContent = meta;
+  window.print();
+}
+
+// ── MULTI-SELECT СТАТУСОВ ─────────────────────────
+function toggleStDropdown(e) {
+  e.stopPropagation();
+  document.getElementById('stFDrop').classList.toggle('open');
+  document.getElementById('stFBtn').classList.toggle('active', document.getElementById('stFDrop').classList.contains('open'));
+}
+document.addEventListener('click', () => {
+  document.getElementById('stFDrop')?.classList.remove('open');
+  const btn = document.getElementById('stFBtn');
+  if (btn) btn.classList.remove('active');
+});
+function getSelStatuses() {
+  return [...document.querySelectorAll('#stFDrop input[type=checkbox]:checked')].map(c => c.value);
+}
+function onStChange() {
+  const sel = getSelStatuses();
+  const label = document.getElementById('stFLabel');
+  if (!sel.length) { label.textContent = 'Все статусы'; label.style.color = ''; }
+  else if (sel.length === 1) { label.textContent = sel[0]; label.style.color = 'var(--c1)'; }
+  else { label.textContent = `Статусы: ${sel.length}`; label.style.color = 'var(--c1)'; }
+  renderAll();
+}
+function clearStFilter() {
+  document.querySelectorAll('#stFDrop input[type=checkbox]').forEach(c => c.checked = false);
+  onStChange();
+}
+
+// ── SORT & RESP FILTER STATE ──────────────────────
+let sortCol = 'status', sortDir = 1, filterResp = '';
+let infVisible = false;
+
+function renderAll() {
+  renderStats();
+  renderInfographic();
+  renderTable();
+  rebuildRespDropdown();
+  const tot = tasks.length;
+  document.getElementById('totalCount').textContent = tot;
+  const nvtCnt = JSON.parse(localStorage.getItem(BRANCHES.nvt.key)||'[]').length;
+  const nygCnt = JSON.parse(localStorage.getItem(BRANCHES.nyg.key)||'[]').length;
+  document.getElementById('branchCountBadge').textContent =
+    `(НВТ: ${nvtCnt} · НЯГ: ${nygCnt})`;
+}
+
+// ── INFOGRAPHIC ───────────────────────────────────
+function toggleInfographic() {
+  infVisible = !infVisible;
+  document.getElementById('infPanel').style.display = infVisible ? 'block' : 'none';
+  document.getElementById('infToggleBtn').textContent = infVisible ? '📊 Скрыть' : '📊 По исполнителям';
+  if (infVisible) renderInfographic();
+}
+
+function renderInfographic() {
+  if (!infVisible) return;
+  const yr = document.getElementById('yearSel').value;
+  const ft = yr === 'all' ? tasks : tasks.filter(t => !t.dateAssigned || new Date(t.dateAssigned).getFullYear() == yr);
+
+  const byP = {};
+  for (const t of ft) {
+    const name = t.responsible && t.responsible.trim() ? t.responsible.trim() : 'Не указан';
+    if (!byP[name]) byP[name] = {ov:0, act:0, don:0};
+    const st = calcStatus(t);
+    if (st === 'Просрочено') byP[name].ov++;
+    else if (st === 'Исполнено' || st === 'Снято с контроля' || st === 'Выполнено с нарушением срока') byP[name].don++;
+    else byP[name].act++;
+  }
+
+  const people = Object.entries(byP).sort((a,b) => {
+    const ta = a[1].ov+a[1].act+a[1].don, tb = b[1].ov+b[1].act+b[1].don;
+    return tb - ta;
+  });
+  const maxTot = Math.max(...people.map(([,d]) => d.ov+d.act+d.don), 1);
+
+  // Store index→name map for safe onclick
+  window._infNames = people.map(([name]) => name);
+
+  const body = document.getElementById('infBody');
+  if (!people.length) { body.innerHTML = '<div style="color:var(--g400);font-size:13px;padding:8px 0;">Нет данных</div>'; return; }
+
+  body.innerHTML = people.map(([name, d], idx) => {
+    const tot = d.ov+d.act+d.don;
+    const pOv  = Math.round(d.ov  / maxTot * 100);
+    const pAct = Math.round(d.act / maxTot * 100);
+    const pDon = Math.round(d.don / maxTot * 100);
+    const isSel = filterResp === name;
+    return `<div class="inf-row ${isSel?'inf-sel':''}" onclick="clickInfByIdx(${idx})">
+      <div class="inf-name" title="${esc(name)}">${esc(name)}</div>
+      <div class="inf-bar-wrap">
+        <div class="inf-bar">
+          ${d.ov  ? `<div class="inf-seg inf-ov"  style="width:${pOv}%"  title="Просрочено: ${d.ov}"></div>` : ''}
+          ${d.act ? `<div class="inf-seg inf-act" style="width:${pAct}%" title="В работе: ${d.act}"></div>` : ''}
+          ${d.don ? `<div class="inf-seg inf-don" style="width:${pDon}%" title="Исполнено: ${d.don}"></div>` : ''}
+        </div>
+      </div>
+      <div class="inf-counts">
+        ${d.ov  ? `<span class="inf-c inf-c-ov">${d.ov}</span>` : ''}
+        ${d.act ? `<span class="inf-c inf-c-act">${d.act}</span>` : ''}
+        ${d.don ? `<span class="inf-c inf-c-don">${d.don}</span>` : ''}
+      </div>
+      <div class="inf-total">${tot}</div>
+    </div>`;
+  }).join('');
+}
+
+function clickInfByIdx(idx) {
+  const name = (window._infNames || [])[idx];
+  if (name !== undefined) clickInfRow(name, 'name');
+}
+
+function clickInfRow(nameOrId, mode) {
+  let name = nameOrId;
+  // called from table row: resolve name from task id
+  if (mode === 'resp') {
+    const t = tasks.find(x => x.id === nameOrId);
+    name = t && t.responsible && t.responsible.trim() ? t.responsible.trim() : 'Не указан';
+  } else if (mode === 'name') {
+    name = nameOrId; // already a string
+  }
+  filterResp = filterResp === name ? '' : name;
+  const sel = document.getElementById('respF');
+  if (sel) sel.value = filterResp;
+  document.getElementById('infClearBtn').classList.toggle('vis', !!filterResp);
+  renderInfographic();
+  renderTable();
+}
+
+function clearRespFilter() {
+  filterResp = '';
+  const sel = document.getElementById('respF');
+  if (sel) sel.value = '';
+  document.getElementById('infClearBtn').classList.remove('vis');
+  renderInfographic();
+  renderTable();
+}
+
+function onRespFilter() {
+  filterResp = document.getElementById('respF').value;
+  document.getElementById('infClearBtn')?.classList.toggle('vis', !!filterResp);
+  renderInfographic();
+  renderTable();
+}
+
+function rebuildRespDropdown() {
+  const sel = document.getElementById('respF'); if (!sel) return;
+  const yr = document.getElementById('yearSel').value;
+  const ft = yr === 'all' ? tasks : tasks.filter(t => !t.dateAssigned || new Date(t.dateAssigned).getFullYear() == yr);
+  const names = [...new Set(ft.map(t => t.responsible && t.responsible.trim() || 'Не указан'))].sort((a,b)=>a.localeCompare(b,'ru'));
+  const cur = filterResp;
+  sel.innerHTML = '<option value="">Все исполнители</option>' +
+    names.map(n => `<option value="${esc(n)}" ${n===cur?'selected':''}>${esc(n)}</option>`).join('');
+}
+
+// ── SORT ──────────────────────────────────────────
+function sortByCol(col) {
+  if (sortCol === col) sortDir = -sortDir;
+  else { sortCol = col; sortDir = 1; }
+  // update header arrows
+  ['date','resp','plan','status'].forEach(k => {
+    const el = document.getElementById('th-'+k); if (!el) return;
+    el.classList.remove('asc','desc');
+  });
+  const map = {dateAssigned:'date', responsible:'resp', datePlan:'plan', status:'status'};
+  const el = document.getElementById('th-'+map[col]);
+  if (el) el.classList.add(sortDir===1?'asc':'desc');
+  renderTable();
+}
+
+function renderStats() {
+  const yr = document.getElementById('yearSel').value;
+  const f = yr === 'all' ? tasks : tasks.filter(t => t.dateAssigned && new Date(t.dateAssigned).getFullYear() == yr);
+  const tot = f.length;
+  const work = f.filter(t => calcStatus(t) === 'На исполнении').length;
+  const over = f.filter(t => calcStatus(t) === 'Просрочено').length;
+  const late = f.filter(t => calcStatus(t) === 'Выполнено с нарушением срока').length;
+  const done = f.filter(t => calcStatus(t) === 'Исполнено').length;
+  const b = BRANCHES[currentBranch];
+
+  document.getElementById('statsRow').innerHTML =
+    `<span class="chip" style="background:rgba(255,255,255,.25); font-weight:700; letter-spacing:.3px">${b.short}</span>` +
+    `<span class="chip">Всего: <span class="num">${tot}</span></span>` +
+    `<span class="chip chip-amber">В работе: <span class="num">${work}</span></span>` +
+    (over ? `<span class="chip chip-red">⚠ Просрочено: <span class="num">${over}</span></span>` : '') +
+    (late ? `<span class="chip" style="background:rgba(234,88,12,.5)">⏱ С нарушением срока: <span class="num">${late}</span></span>` : '') +
+    `<span class="chip chip-green">✓ Исполнено: <span class="num">${done}</span></span>`;
+}
+
+function renderTable() {
+  const yr  = document.getElementById('yearSel').value;
+  const srch = document.getElementById('srch').value.toLowerCase();
+  const selSt = getSelStatuses();
+  const mnF = document.getElementById('mnF').value;
+
+  let f = tasks.filter(t => {
+    if (yr !== 'all' && t.dateAssigned && new Date(t.dateAssigned).getFullYear() != yr) return false;
+    const st = calcStatus(t);
+    if (selSt.length && !selSt.includes(st)) return false;
+    if (mnF && t.dateAssigned && new Date(t.dateAssigned).getMonth()+1 != mnF) return false;
+    if (srch && !`${t.task} ${t.responsible} ${t.notes||''}`.toLowerCase().includes(srch)) return false;
+    if (filterResp) {
+      const name = t.responsible && t.responsible.trim() ? t.responsible.trim() : 'Не указан';
+      if (name !== filterResp) return false;
+    }
+    return true;
+  });
+
+  // Sort
+  const ord = { 'Просрочено':0, 'На исполнении':1, 'Снято с контроля':2, 'Выполнено с нарушением срока':3, 'Исполнено':4 };
+  f.sort((a,b) => {
+    if (sortCol === 'status') return (ord[calcStatus(a)]||1) - (ord[calcStatus(b)]||1);
+    if (sortCol === 'responsible') return sortDir * (a.responsible||'').localeCompare(b.responsible||'', 'ru');
+    if (sortCol === 'datePlan') return sortDir * ((a.datePlan||'9999') > (b.datePlan||'9999') ? 1 : -1);
+    if (sortCol === 'dateAssigned') return sortDir * ((a.dateAssigned||'') > (b.dateAssigned||'') ? 1 : -1);
+    return 0;
+  });
+
+  const tbody = document.getElementById('tbody');
+  const empty = document.getElementById('emptyState');
+
+  if (!f.length) { tbody.innerHTML = ''; empty.style.display = 'block'; return; }
+  empty.style.display = 'none';
+
+  tbody.innerHTML = f.map((t, i) => {
+    const st = calcStatus(t);
+    const ov = st === 'Просрочено';
+    const respName = t.responsible && t.responsible.trim() ? t.responsible.trim() : 'Не указан';
+    const respSel  = filterResp === respName;
+    return `<tr class="${ov ? 'ov' : ''}">
+      <td style="color:var(--g400); font-size:12px; font-weight:600;">${i+1}</td>
+      <td style="font-size:12px; color:var(--g600); white-space:nowrap;">${fmtD(t.dateAssigned)}</td>
+      <td class="task-cell">
+        <div class="task-text">${esc(t.task||'—')}</div>
+      </td>
+      <td style="font-size:12px; white-space:nowrap;">
+        <span style="cursor:pointer; ${respSel ? 'color:var(--c1);font-weight:700' : ''}"
+          onclick="clickInfRow(${t.id},'resp')"
+          title="Фильтр по исполнителю">${esc(t.responsible||'—')}</span>
+      </td>
+      <td style="font-size:12px; white-space:nowrap; ${ov?'color:var(--err);font-weight:700':''}">${fmtD(t.datePlan)}</td>
+      <td style="font-size:12px; color:var(--g400); text-align:center;">${calcDays(t)}</td>
+      <td>
+        <span class="badge ${BCLS[st]||'b-work'}" onclick="cycleStatus(${t.id})" title="Нажмите для смены статуса">${st}</span>
+      </td>
+      <td style="white-space:nowrap;">
+        <button class="abt" onclick="openEdit(${t.id})" title="Редактировать">✏️</button>
+        <button class="abt" onclick="delTask(${t.id})" title="Удалить">🗑️</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════════════════
+// TASK OPERATIONS
+// ═══════════════════════════════════════════════════
+function addTask(o) {
+  tasks.push({
+    id: nxtId(),
+    dateAssigned: o.dateAssigned || new Date().toISOString().split('T')[0],
+    task: o.task||'', responsible: o.responsible||'', manager: o.manager||'',
+    datePlan: o.datePlan||'', dateFact: o.dateFact||'', notes: o.notes||'',
+    status: o.status||'На исполнении', reporting: o.reporting||'', source: o.source||'other',
+  });
+  saveTasks();
+}
+
+function addManual() {
+  const task = document.getElementById('f-task').value.trim();
+  if (!task) { ntf('Введите текст поручения', true); return; }
+  addTask({
+    task,
+    responsible: document.getElementById('f-resp').value.trim(),
+    manager: document.getElementById('f-mgr').value.trim(),
+    dateAssigned: document.getElementById('f-date').value || new Date().toISOString().split('T')[0],
+    datePlan: document.getElementById('f-plan').value,
+    reporting: document.getElementById('f-rep').value.trim(),
+    notes: document.getElementById('f-note').value.trim(),
+    source: document.getElementById('f-src').value,
+  });
+  clearManual();
+  ntf('Поручение добавлено!');
+  showTab('tasks', document.querySelector('.tb'));
+}
+
+function clearManual() {
+  ['f-task','f-resp','f-mgr','f-plan','f-rep','f-note'].forEach(id => document.getElementById(id).value='');
+  document.getElementById('f-date').value = new Date().toISOString().split('T')[0];
+}
+
+function cycleStatus(id) {
+  const t = tasks.find(x => x.id === id); if (!t) return;
+  const c = ['На исполнении','Исполнено','Снято с контроля'];
+  const i = c.indexOf(t.status||'На исполнении');
+  t.status = c[(i+1) % c.length];
+  if (t.status === 'Исполнено' && !t.dateFact) t.dateFact = new Date().toISOString().split('T')[0];
+  saveTasks();
+}
+
+function delTask(id) {
+  if (!confirm('Удалить это поручение?')) return;
+  tasks = tasks.filter(t => t.id !== id);
+  saveTasks(); ntf('Поручение удалено');
+}
+
+// ═══════════════════════════════════════════════════
+// EDIT MODAL
+// ═══════════════════════════════════════════════════
+function openEdit(id) {
+  const t = tasks.find(x => x.id === id); if (!t) return;
+  ['id','task','resp','mgr','date','plan','fact','status','src','rep','note'].forEach(k => {
+    const el = document.getElementById('e-'+k); if (el) el.value = t[{id:'id',task:'task',resp:'responsible',mgr:'manager',date:'dateAssigned',plan:'datePlan',fact:'dateFact',status:'status',src:'source',rep:'reporting',note:'notes'}[k]] || '';
+  });
+  document.getElementById('editModal').classList.add('on');
+}
+function saveEdit() {
+  const id = +document.getElementById('e-id').value;
+  const t = tasks.find(x => x.id === id); if (!t) return;
+  const m = {task:'task',resp:'responsible',mgr:'manager',date:'dateAssigned',plan:'datePlan',fact:'dateFact',status:'status',src:'source',rep:'reporting',note:'notes'};
+  for (const [k,v] of Object.entries(m)) t[v] = document.getElementById('e-'+k).value;
+  saveTasks();
+  document.getElementById('editModal').classList.remove('on');
+  ntf('Изменения сохранены');
+}
+function mClose(e) { if (e.target === e.currentTarget) document.getElementById('editModal').classList.remove('on'); }
+
+// ═══════════════════════════════════════════════════
+// TEXT PARSER
+// ═══════════════════════════════════════════════════
+const MN = {января:1,февраля:2,марта:3,апреля:4,мая:5,июня:6,июля:7,августа:8,сентября:9,октября:10,ноября:11,декабря:12};
+
+function parseDate(s) {
+  let m = s.match(/(\d{1,2})[.\/-](\d{1,2})[.\/-](\d{2,4})/);
+  if (m) { const y = m[3].length===2?'20'+m[3]:m[3]; return `${y}-${String(m[2]).padStart(2,'0')}-${String(m[1]).padStart(2,'0')}`; }
+  m = s.match(/(\d{1,2})\s+(января|февраля|марта|апреля|мая|июня|июля|августа|сентября|октября|ноября|декабря)\s+(\d{4})/i);
+  if (m) return `${m[3]}-${String(MN[m[2].toLowerCase()]).padStart(2,'0')}-${String(m[1]).padStart(2,'0')}`;
+  return '';
+}
+function extractName(s) {
+  let m = s.match(/([А-ЯЁ][а-яёА-ЯЁ\-]+)\s+([А-ЯЁ]\.[А-ЯЁ]\.)/);
+  if (m) return `${m[1]} ${m[2]}`;
+  m = s.match(/([А-ЯЁ]\.[А-ЯЁ]\.)\s+([А-ЯЁ][а-яё]+)/);
+  if (m) return `${m[2]} ${m[1]}`;
+  return '';
+}
+function extractDl(s) {
+  for (const p of [/(?:срок[:\s]+|до[:\s]+|не позднее[:\s]+|выполнить до[:\s]+)([^,\n;.]{3,40})/i]) {
+    const m = s.match(p); if (m) { const d = parseDate(m[1]); if(d) return d; }
+  }
+  return parseDate(s);
+}
+function parseTextToTasks(text) {
+  const lines = text.split('\n'), blocks = [];
+  let cur = null;
+  const isNum = l => /^\s*\d+[\.\)]\s+[А-ЯЁA-Z]/.test(l);
+  const isVerb = l => /^\s*[-–•*]?\s*(Поручить|Обеспечить|Подготовить|Провести|Организовать|Разработать|Рассмотреть|Направить|Представить|Проверить|Выполнить|Согласовать|Принять|Завершить)/i.test(l);
+  for (const line of lines) {
+    const l = line.trim(); if (!l) { if(cur){blocks.push(cur);cur=null;} continue; }
+    if (isNum(l)||isVerb(l)) { if(cur) blocks.push(cur); cur=l.replace(/^\s*\d+[\.\)]\s+/,'').replace(/^\s*[-–•*]\s*/,''); }
+    else if (cur) { if(l.length<200) cur+=' '+l; }
+    else { if(l.length>15) blocks.push(l); }
+  }
+  if (cur) blocks.push(cur);
+  if (!blocks.length && text.trim().length>10) blocks.push(text.trim().slice(0,500));
+  const today = new Date().toISOString().split('T')[0];
+  return blocks.map(b => ({ task:b.trim(), responsible:extractName(b), datePlan:extractDl(b), dateAssigned:today }));
+}
+
+function parseAndShow(which) {
+  const txtId = which==='ocr'?'ocrTxt':'txtIn';
+  const resId = which==='ocr'?'photoRes':'txtRes';
+  const srcType = which==='ocr'?'photo':'email';
+  const text = document.getElementById(txtId).value.trim();
+  if (!text) { ntf('Нет текста для анализа', true); return; }
+  showParseResults(parseTextToTasks(text), resId, srcType);
+}
+
+function showParseResults(parsed, cid, srcType) {
+  const c = document.getElementById(cid);
+  if (!parsed.length) {
+    c.innerHTML = '<div style="margin-top:16px;padding:14px;background:var(--g50);border-radius:10px;color:var(--g600);font-size:13px;">⚠️ Поручений не найдено. Попробуйте другой текст или добавьте вручную.</div>';
+    return;
+  }
+  c.innerHTML = `<div style="margin-top:20px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+      <span style="font-size:14px;font-weight:700;color:var(--g800);">Найдено поручений: <span style="color:var(--c1)">${parsed.length}</span></span>
+      <button class="btn btn-g btn-sm" onclick="addAllParsed('${cid}',${parsed.length},'${srcType}')">✓ Добавить все (${parsed.length})</button>
+    </div>
+    ${parsed.map((t,i) => `
+    <div class="pr" id="pr-wrap-${cid}-${i}">
+      <div class="pr-head">
+        <span class="pr-num">Поручение ${i+1}</span>
+        <button class="btn btn-g btn-xs" onclick="addOne('${cid}',${i},'${srcType}')">✓ Добавить</button>
+      </div>
+      <div class="fg" style="grid-template-columns:1fr;">
+        <div class="fld"><label>Текст поручения</label>
+          <textarea class="fc" id="pr-t-${cid}-${i}" style="min-height:65px;">${esc(t.task)}</textarea>
+        </div>
+      </div>
+      <div class="fg" style="grid-template-columns:repeat(auto-fit,minmax(170px,1fr));margin-top:10px;">
+        <div class="fld"><label>Ответственный</label><input class="fc" id="pr-r-${cid}-${i}" value="${esc(t.responsible)}"></div>
+        <div class="fld"><label>Дата поручения</label><input class="fc" type="date" id="pr-d-${cid}-${i}" value="${t.dateAssigned}"></div>
+        <div class="fld"><label>Срок исполнения</label><input class="fc" type="date" id="pr-p-${cid}-${i}" value="${t.datePlan}"></div>
+      </div>
+    </div>`).join('')}
+  </div>`;
+}
+
+function addOne(cid, i, src) {
+  const task = document.getElementById(`pr-t-${cid}-${i}`)?.value.trim(); if (!task) return;
+  addTask({ task, responsible: document.getElementById(`pr-r-${cid}-${i}`)?.value.trim()||'',
+    dateAssigned: document.getElementById(`pr-d-${cid}-${i}`)?.value||new Date().toISOString().split('T')[0],
+    datePlan: document.getElementById(`pr-p-${cid}-${i}`)?.value||'', source: src });
+  const wrap = document.getElementById(`pr-wrap-${cid}-${i}`);
+  if (wrap) { wrap.style.opacity='.5'; wrap.style.pointerEvents='none'; }
+  const btn = document.querySelector(`[onclick="addOne('${cid}',${i},'${src}')"]`);
+  if (btn) { btn.textContent='✓ Добавлено'; btn.className='btn btn-s btn-xs'; }
+  ntf('Поручение добавлено!');
+}
+
+function addAllParsed(cid, cnt, src) {
+  let n = 0;
+  for (let i=0; i<cnt; i++) {
+    const task = document.getElementById(`pr-t-${cid}-${i}`)?.value.trim(); if (!task) continue;
+    addTask({ task, responsible: document.getElementById(`pr-r-${cid}-${i}`)?.value.trim()||'',
+      dateAssigned: document.getElementById(`pr-d-${cid}-${i}`)?.value||new Date().toISOString().split('T')[0],
+      datePlan: document.getElementById(`pr-p-${cid}-${i}`)?.value||'', source: src });
+    n++;
+  }
+  ntf(`Добавлено ${n} поручений!`, false, '✓');
+  showTab('tasks', document.querySelector('.tb'));
+}
+
+// ═══════════════════════════════════════════════════
+// PHOTO / OCR
+// ═══════════════════════════════════════════════════
+let curPhoto = null;
+function dzO(e) { e.preventDefault(); document.getElementById('dz').classList.add('drag'); }
+function dzL()  { document.getElementById('dz').classList.remove('drag'); }
+function dzD(e) { e.preventDefault(); dzL(); const f=e.dataTransfer.files[0]; if(f) loadPhoto(f); }
+function photoC(e) { const f=e.target.files[0]; if(f) loadPhoto(f); }
+function loadPhoto(f) {
+  curPhoto = f;
+  const r = new FileReader();
+  r.onload = e => {
+    document.getElementById('pvImg').src = e.target.result;
+    document.getElementById('photoPv').style.display = 'block';
+    document.getElementById('dz').style.display = 'none';
+    document.getElementById('ocrWrap').style.display = 'none';
+    document.getElementById('photoRes').innerHTML = '';
+    document.getElementById('ocrStTxt').textContent = 'Фото загружено. Нажмите «Распознать текст».';
+  };
+  r.readAsDataURL(f);
+}
+function clrPhoto() {
+  curPhoto = null;
+  document.getElementById('photoPv').style.display = 'none';
+  document.getElementById('dz').style.display = 'block';
+  document.getElementById('ocrWrap').style.display = 'none';
+  document.getElementById('photoRes').innerHTML = '';
+  document.getElementById('photoIn').value = '';
+  document.getElementById('ocrBtn').disabled = false;
+  document.getElementById('ocrBtn').textContent = '🔍 Распознать текст';
+}
+async function runOCR() {
+  if (!curPhoto) return;
+  const stTxt = document.getElementById('ocrStTxt');
+  const pb = document.getElementById('pbar'), pf = document.getElementById('pfill');
+  const btn = document.getElementById('ocrBtn');
+  btn.disabled = true; btn.textContent = '⏳ Распознаю...';
+  pb.style.display = 'block'; pf.style.width = '5%';
+  stTxt.textContent = 'Загрузка языкового пакета (первый раз ~15–30 сек)...';
+  try {
+    if (typeof Tesseract === 'undefined') throw new Error('OCR библиотека не загружена');
+    const result = await Tesseract.recognize(curPhoto, 'rus+eng', {
+      logger: m => {
+        if (m.status === 'loading language traineddata') { pf.style.width='25%'; stTxt.textContent='Загрузка языкового пакета...'; }
+        if (m.status === 'recognizing text') { pf.style.width=Math.round(25+m.progress*75)+'%'; stTxt.textContent=`Распознаю... ${Math.round(m.progress*100)}%`; }
+      }
+    });
+    pf.style.width = '100%';
+    stTxt.textContent = '✅ Распознавание завершено!';
+    document.getElementById('ocrTxt').value = result.data.text;
+    document.getElementById('ocrWrap').style.display = 'block';
+  } catch(e) {
+    stTxt.textContent = '⚠️ Не удалось распознать автоматически — вставьте текст вручную:';
+    document.getElementById('ocrTxt').value = '';
+    document.getElementById('ocrTxt').placeholder = 'Вставьте или введите текст из письма...';
+    document.getElementById('ocrWrap').style.display = 'block';
+  }
+  pb.style.display = 'none';
+  btn.disabled = false; btn.textContent = '🔍 Распознать снова';
+}
+
+// ═══════════════════════════════════════════════════
+// EXCEL IMPORT / EXPORT
+// ═══════════════════════════════════════════════════
+function importXLSX(event) {
+  const f = event.target.files[0]; if (!f) return;
+  const st = document.getElementById('importSt'); st.textContent = '⏳ Читаю файл...';
+  const r = new FileReader();
+  r.onload = e => {
+    try {
+      const wb = XLSX.read(e.target.result, {type:'array', cellDates:true});
+      const sn = wb.SheetNames.find(n=>/свод|лист1|поруч/i.test(n)) || wb.SheetNames[0];
+      const rows = XLSX.utils.sheet_to_json(wb.Sheets[sn], {header:1, defval:''});
+      let hr = -1;
+      for (let i=0; i<Math.min(10,rows.length); i++) {
+        if (rows[i].some(c => /поручение|ответственный/i.test(String(c)))) { hr=i; break; }
+      }
+      if (hr<0) { st.textContent='⚠️ Не найдена строка заголовков'; return; }
+      const H = rows[hr].map(h => String(h).toLowerCase());
+      const ci = {
+        task: H.findIndex(h=>/^поручение$|поручени/.test(h)),
+        responsible: H.findIndex(h=>/ответственный/.test(h)),
+        manager: H.findIndex(h=>/руководитель/.test(h)),
+        dateA: H.findIndex(h=>/дата поручения/.test(h)),
+        datePlan: H.findIndex(h=>/плановая|план/.test(h)&&!/факт/.test(h)),
+        dateFact: H.findIndex(h=>/дата исполнения|факт/.test(h)),
+        status: H.findIndex(h=>/отметка|статус/.test(h)),
+        notes: H.findIndex(h=>/примечание/.test(h)),
+        reporting: H.findIndex(h=>/отчет/.test(h)),
+      };
+      const pD = v => {
+        if (!v) return '';
+        if (v instanceof Date) return v.toISOString().split('T')[0];
+        if (typeof v==='number') { const d=new Date((v-25569)*864e5); return d.toISOString().split('T')[0]; }
+        const m = String(v).match(/(\d{2})\.(\d{2})\.(\d{4})/);
+        if (m) return `${m[3]}-${m[2]}-${m[1]}`;
+        return '';
+      };
+      let cnt = 0;
+      for (let i=hr+1; i<rows.length; i++) {
+        const row = rows[i];
+        const task = ci.task>=0 ? String(row[ci.task]||'').trim() : '';
+        if (task.length < 3) continue;
+        addTask({ task, responsible:ci.responsible>=0?String(row[ci.responsible]||''):'',
+          manager:ci.manager>=0?String(row[ci.manager]||''):'',
+          dateAssigned:ci.dateA>=0?pD(row[ci.dateA]):'',
+          datePlan:ci.datePlan>=0?pD(row[ci.datePlan]):'',
+          dateFact:ci.dateFact>=0?pD(row[ci.dateFact]):'',
+          status:ci.status>=0?String(row[ci.status]||'На исполнении'):'На исполнении',
+          notes:ci.notes>=0?String(row[ci.notes]||''):'',
+          reporting:ci.reporting>=0?String(row[ci.reporting]||''):'',
+          source:'email' });
+        cnt++;
+      }
+      st.textContent = `✅ Импортировано ${cnt} поручений из «${f.name}»`;
+      ntf(`Импортировано ${cnt} поручений`);
+      event.target.value = '';
+    } catch(ex) { st.textContent = '⚠️ Ошибка: ' + ex.message; }
+  };
+  r.readAsArrayBuffer(f);
+}
+
+function exportXLSX(mode) {
+  const yr = document.getElementById('yearSel').value;
+  let data = tasks;
+  if (mode==='active') data = tasks.filter(t=>['На исполнении','Просрочено'].includes(calcStatus(t)));
+  if (mode==='year' && yr!=='all') data = tasks.filter(t=>t.dateAssigned&&new Date(t.dateAssigned).getFullYear()==yr);
+  const H = ['№','Дата поручения','Поручение','Ответственный','Руководитель','Плановая дата','Дата исполнения','Дней','Примечание','Статус','Отчётность','Источник'];
+  const rows = data.map((t,i) => [i+1, t.dateAssigned?new Date(t.dateAssigned):'', t.task, t.responsible, t.manager,
+    t.datePlan?new Date(t.datePlan):'', t.dateFact?new Date(t.dateFact):'',
+    calcDays(t), t.notes, calcStatus(t), t.reporting,
+    {email:'Email',protocol:'Протокол',verbal:'Устно',photo:'Фото'}[t.source]||'']);
+  const ws = XLSX.utils.aoa_to_sheet([H,...rows]);
+  ws['!cols'] = [6,14,50,20,18,14,14,8,22,20,20,12].map(w=>({wch:w}));
+  const wb = XLSX.utils.book_new();
+  const bn = BRANCHES[currentBranch].name;
+  XLSX.utils.book_append_sheet(wb, ws, `${bn.slice(0,8)}_${yr}`);
+  const fn = `Поручения_${bn}_${yr}_${new Date().toLocaleDateString('ru').replace(/\./g,'-')}.xlsx`;
+  XLSX.writeFile(wb, fn);
+  document.getElementById('exportSt').textContent = `✅ Файл сохранён: ${fn}`;
+}
+
+function exportJSON() {
+  const all = { nvt: JSON.parse(localStorage.getItem(BRANCHES.nvt.key)||'[]'), nyg: JSON.parse(localStorage.getItem(BRANCHES.nyg.key)||'[]') };
+  const blob = new Blob([JSON.stringify(all,null,2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `backup_poruchen_all_${new Date().toISOString().split('T')[0]}.json`;
+  a.click(); URL.revokeObjectURL(a.href);
+  ntf('Резервная копия сохранена');
+}
+
+function importJSON(event) {
+  const f = event.target.files[0]; if (!f) return;
+  const r = new FileReader();
+  r.onload = e => {
+    try {
+      const d = JSON.parse(e.target.result);
+      if (Array.isArray(d)) { // old format: single branch
+        tasks = d; saveTasks(); ntf(`Восстановлено ${tasks.length} поручений`);
+      } else if (d.nvt || d.nyg) { // new format: both branches
+        if (d.nvt) localStorage.setItem(BRANCHES.nvt.key, JSON.stringify(d.nvt));
+        if (d.nyg) localStorage.setItem(BRANCHES.nyg.key, JSON.stringify(d.nyg));
+        loadTasks(); renderAll();
+        ntf(`Восстановлено НВТ: ${(d.nvt||[]).length}, НЯГ: ${(d.nyg||[]).length}`);
+      } else throw new Error('Неверный формат');
+    } catch(ex) { ntf('Ошибка: ' + ex.message, true); }
+  };
+  r.readAsText(f);
+}
+
+function clrAll() {
+  const b = BRANCHES[currentBranch].name;
+  if (!confirm(`Удалить ВСЕ поручения филиала ${b}?`)) return;
+  tasks = []; saveTasks(); ntf(`Данные ${b} очищены`);
+}
+
+// ═══════════════════════════════════════════════════
+// UI HELPERS
+// ═══════════════════════════════════════════════════
+function showTab(name, btn) {
+  document.querySelectorAll('.tc').forEach(el => el.classList.remove('on'));
+  document.querySelectorAll('.tb').forEach(el => el.classList.remove('on'));
+  document.getElementById('tab-'+name).classList.add('on');
+  if (btn) btn.classList.add('on');
+}
+function showSub(name, btn) {
+  ['manual','text','photo'].forEach(n => {
+    document.getElementById('sub-'+n).style.display = n===name ? 'block' : 'none';
+  });
+  document.querySelectorAll('.stb').forEach(el => el.classList.remove('on'));
+  if (btn) btn.classList.add('on');
+}
+
+let ntfT;
+function ntf(msg, err=false, ico='✓') {
+  clearTimeout(ntfT);
+  const el = document.getElementById('ntf');
+  document.getElementById('ntfIco').textContent = err ? '✕' : ico;
+  document.getElementById('ntfMsg').textContent = msg;
+  el.className = 'ntf ' + (err ? 'ntf-err' : 'ntf-ok');
+  el.classList.add('on');
+  ntfT = setTimeout(() => el.classList.remove('on'), 3200);
+}
+
+// ═══════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', () => {
+  applyBranchUI();
+  loadTasks();
+  document.getElementById('f-date').value = new Date().toISOString().split('T')[0];
+  document.getElementById('yearSel').value = new Date().getFullYear();
+  renderAll();
+});
+</script>
+
+<script src="https://unpkg.com/tesseract.js@4.1.1/dist/tesseract.min.js"></script>
+</body>
+</html>
