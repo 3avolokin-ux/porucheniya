@@ -675,6 +675,10 @@ document.addEventListener('DOMContentLoaded', () => {
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
     Импорт / Экспорт
   </button>
+  <button class="tb" onclick="showTab('sms',this)">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>
+    SMS-рассылка
+  </button>
 </div>
 
 <!-- ══════════════════ CONTENT ══════════════════ -->
@@ -949,6 +953,125 @@ document.addEventListener('DOMContentLoaded', () => {
         <button class="btn btn-r" style="margin-left:auto;" onclick="clrAll()">🗑️ Очистить данные филиала</button>
       </div>
       <input type="file" id="jsonIn" accept=".json" style="display:none" onchange="importJSON(event)">
+    </div>
+  </div>
+
+  <!-- ─── TAB: SMS ─── -->
+  <div id="tab-sms" class="tc">
+    <div class="sms-setup">
+      <!-- Left column: API settings -->
+      <div>
+        <div class="sms-api-card">
+          <div class="card-title">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--c1)" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            Настройки SMS.ru
+          </div>
+          <div class="card-desc">Укажите API-ключ вашего аккаунта SMS.ru для отправки уведомлений</div>
+          <div class="fg" style="grid-template-columns:1fr;">
+            <div class="fld">
+              <label>API-ключ SMS.ru</label>
+              <div style="display:flex; gap:8px;">
+                <input class="fc" id="sms-api-key" type="password" placeholder="XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX" style="flex:1;">
+                <button class="btn btn-s" onclick="toggleApiKeyVis()" title="Показать/скрыть" style="padding:8px 12px;">👁</button>
+              </div>
+            </div>
+          </div>
+          <div style="display:flex; gap:10px; margin-top:12px; align-items:center; flex-wrap:wrap;">
+            <button class="btn btn-p" onclick="saveSmsSettings()">Сохранить настройки</button>
+            <button class="sms-test-btn" onclick="checkSmsBalance()">Проверить баланс</button>
+            <span id="smsBalanceInfo" class="sms-balance" style="display:none;"></span>
+          </div>
+          <div class="sms-info">
+            <strong>Как получить API-ключ:</strong><br>
+            1. Зарегистрируйтесь на <a href="https://sms.ru" target="_blank" style="color:var(--c1);">sms.ru</a><br>
+            2. Перейдите в раздел «Программистам» → «API»<br>
+            3. Скопируйте ваш api_id
+          </div>
+        </div>
+
+        <div class="sms-api-card" style="margin-top:20px;">
+          <div class="card-title">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--c1)" stroke-width="2"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><path d="M12 6v6l4 2"/></svg>
+            События для уведомлений
+          </div>
+          <div class="card-desc">Выберите, о каких событиях отправлять SMS-уведомления</div>
+          <div class="sms-evt-grid">
+            <span class="sms-evt-label">Новое поручение назначено</span>
+            <label class="sms-switch"><input type="checkbox" id="sms-evt-new" checked><span class="sms-slider"></span></label>
+            <span class="sms-evt-label">Приближение срока (за 3 дня)</span>
+            <label class="sms-switch"><input type="checkbox" id="sms-evt-warn" checked><span class="sms-slider"></span></label>
+            <span class="sms-evt-label">Просрочка исполнения</span>
+            <label class="sms-switch"><input type="checkbox" id="sms-evt-over" checked><span class="sms-slider"></span></label>
+            <span class="sms-evt-label">Статус изменён (исполнено / снято)</span>
+            <label class="sms-switch"><input type="checkbox" id="sms-evt-status" checked><span class="sms-slider"></span></label>
+          </div>
+          <div style="margin-top:16px;">
+            <label style="font-size:13px; font-weight:600; color:var(--g600);">За сколько дней предупреждать о сроке:</label>
+            <select class="fc" id="sms-warn-days" style="width:auto; margin-top:4px;">
+              <option value="1">1 день</option>
+              <option value="2">2 дня</option>
+              <option value="3" selected>3 дня</option>
+              <option value="5">5 дней</option>
+              <option value="7">7 дней</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right column: Employee directory -->
+      <div>
+        <div class="sms-api-card">
+          <div class="card-title">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--c1)" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
+            Справочник сотрудников
+          </div>
+          <div class="card-desc">Привяжите номера телефонов к ФИО — SMS будет отправляться ответственному</div>
+
+          <!-- Add employee row -->
+          <div class="sms-add-row">
+            <input class="fc" id="sms-new-name" placeholder="Фамилия И.О." style="flex:1.5;">
+            <input class="fc" id="sms-new-phone" placeholder="+7XXXXXXXXXX" style="flex:1;">
+            <button class="btn btn-p" onclick="addEmployee()" style="white-space:nowrap;">+ Добавить</button>
+          </div>
+
+          <div style="margin-top:14px; max-height:400px; overflow-y:auto;">
+            <table class="sms-emp-tbl">
+              <thead>
+                <tr>
+                  <th style="width:40%">ФИО</th>
+                  <th style="width:30%">Телефон</th>
+                  <th style="width:20%">Тест</th>
+                  <th style="width:10%"></th>
+                </tr>
+              </thead>
+              <tbody id="smsEmpBody"></tbody>
+            </table>
+          </div>
+          <div id="smsEmpEmpty" style="text-align:center; padding:24px; color:var(--g400); font-size:13px; display:none;">
+            Сотрудники ещё не добавлены
+          </div>
+
+          <div style="display:flex; gap:10px; margin-top:14px; flex-wrap:wrap;">
+            <button class="btn btn-s" onclick="autoFillEmployees()">Заполнить из поручений</button>
+            <button class="btn btn-s" onclick="exportEmployees()">Экспорт CSV</button>
+          </div>
+        </div>
+
+        <div class="sms-api-card" style="margin-top:20px;">
+          <div class="card-title">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--g600)" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+            Журнал отправки
+          </div>
+          <div class="card-desc">Последние SMS-уведомления</div>
+          <div class="sms-log" id="smsLog">
+            <div style="text-align:center; padding:16px; color:var(--g400); font-size:13px;">Нет записей</div>
+          </div>
+          <div style="display:flex; gap:10px; margin-top:10px;">
+            <button class="btn btn-s" onclick="checkDeadlinesNow()">Проверить сроки сейчас</button>
+            <button class="btn btn-s" onclick="clearSmsLog()" style="margin-left:auto;">Очистить журнал</button>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -1395,14 +1518,17 @@ function renderTable() {
 // TASK OPERATIONS
 // ═══════════════════════════════════════════════════
 function addTask(o) {
-  tasks.push({
+  const newTask = {
     id: nxtId(),
     dateAssigned: o.dateAssigned || new Date().toISOString().split('T')[0],
     task: o.task||'', responsible: o.responsible||'', manager: o.manager||'',
     datePlan: o.datePlan||'', dateFact: o.dateFact||'', notes: o.notes||'',
     status: o.status||'На исполнении', reporting: o.reporting||'', source: o.source||'other',
-  });
+  };
+  tasks.push(newTask);
   saveTasks();
+  // SMS notification for new task
+  if (typeof smsOnNewTask === 'function') smsOnNewTask(newTask);
 }
 
 function addManual() {
@@ -1431,10 +1557,15 @@ function clearManual() {
 function cycleStatus(id) {
   const t = tasks.find(x => x.id === id); if (!t) return;
   const c = ['На исполнении','Исполнено','Снято с контроля'];
-  const i = c.indexOf(t.status||'На исполнении');
+  const oldStatus = t.status || 'На исполнении';
+  const i = c.indexOf(oldStatus);
   t.status = c[(i+1) % c.length];
   if (t.status === 'Исполнено' && !t.dateFact) t.dateFact = new Date().toISOString().split('T')[0];
   saveTasks();
+  // SMS notification for status change
+  if (typeof smsOnStatusChange === 'function' && t.status !== oldStatus) {
+    smsOnStatusChange(t, oldStatus, t.status);
+  }
 }
 
 function delTask(id) {
@@ -1456,11 +1587,16 @@ function openEdit(id) {
 function saveEdit() {
   const id = +document.getElementById('e-id').value;
   const t = tasks.find(x => x.id === id); if (!t) return;
+  const oldStatus = t.status;
   const m = {task:'task',resp:'responsible',mgr:'manager',date:'dateAssigned',plan:'datePlan',fact:'dateFact',status:'status',src:'source',rep:'reporting',note:'notes'};
   for (const [k,v] of Object.entries(m)) t[v] = document.getElementById('e-'+k).value;
   saveTasks();
   document.getElementById('editModal').classList.remove('on');
   ntf('Изменения сохранены');
+  // SMS notification if status changed
+  if (typeof smsOnStatusChange === 'function' && t.status !== oldStatus) {
+    smsOnStatusChange(t, oldStatus, t.status);
+  }
 }
 function mClose(e) { if (e.target === e.currentTarget) document.getElementById('editModal').classList.remove('on'); }
 
@@ -1782,6 +1918,425 @@ function ntf(msg, err=false, ico='✓') {
 }
 
 // ═══════════════════════════════════════════════════
+// SMS MODULE — SMS.ru integration
+// ═══════════════════════════════════════════════════
+const SMS_SETTINGS_KEY = 'sms_settings';
+const SMS_EMPLOYEES_KEY = 'sms_employees';
+const SMS_LOG_KEY = 'sms_log';
+const SMS_SENT_KEY = 'sms_sent_today'; // track sent reminders to avoid duplicates
+
+// ── SMS SETTINGS ─────────────────────────────────
+function loadSmsSettings() {
+  try { return JSON.parse(localStorage.getItem(SMS_SETTINGS_KEY)) || {}; } catch(e) { return {}; }
+}
+function saveSmsSettings() {
+  const apiKey = document.getElementById('sms-api-key').value.trim();
+  if (!apiKey) { ntf('Введите API-ключ SMS.ru', true); return; }
+  const settings = {
+    apiKey,
+    evtNew: document.getElementById('sms-evt-new').checked,
+    evtWarn: document.getElementById('sms-evt-warn').checked,
+    evtOver: document.getElementById('sms-evt-over').checked,
+    evtStatus: document.getElementById('sms-evt-status').checked,
+    warnDays: +document.getElementById('sms-warn-days').value || 3,
+  };
+  localStorage.setItem(SMS_SETTINGS_KEY, JSON.stringify(settings));
+  // Also save to Firebase for cross-device sync
+  db.ref('sms_settings').set(settings).catch(() => {});
+  ntf('SMS-настройки сохранены!');
+}
+function restoreSmsSettings() {
+  const s = loadSmsSettings();
+  if (s.apiKey) document.getElementById('sms-api-key').value = s.apiKey;
+  if (s.evtNew !== undefined) document.getElementById('sms-evt-new').checked = s.evtNew;
+  if (s.evtWarn !== undefined) document.getElementById('sms-evt-warn').checked = s.evtWarn;
+  if (s.evtOver !== undefined) document.getElementById('sms-evt-over').checked = s.evtOver;
+  if (s.evtStatus !== undefined) document.getElementById('sms-evt-status').checked = s.evtStatus;
+  if (s.warnDays) document.getElementById('sms-warn-days').value = s.warnDays;
+}
+function toggleApiKeyVis() {
+  const el = document.getElementById('sms-api-key');
+  el.type = el.type === 'password' ? 'text' : 'password';
+}
+
+// ── EMPLOYEES ────────────────────────────────────
+function loadEmployees() {
+  try { return JSON.parse(localStorage.getItem(SMS_EMPLOYEES_KEY)) || []; } catch(e) { return []; }
+}
+function saveEmployees(emps) {
+  localStorage.setItem(SMS_EMPLOYEES_KEY, JSON.stringify(emps));
+  db.ref('sms_employees').set(emps).catch(() => {});
+  renderEmployees();
+}
+function renderEmployees() {
+  const emps = loadEmployees();
+  const tbody = document.getElementById('smsEmpBody');
+  const empty = document.getElementById('smsEmpEmpty');
+  if (!emps.length) {
+    tbody.innerHTML = '';
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
+  tbody.innerHTML = emps.map((e, i) => `<tr>
+    <td>${esc(e.name)}</td>
+    <td><code style="font-size:13px;">${esc(e.phone)}</code></td>
+    <td><button class="sms-test-btn" style="font-size:11px; padding:4px 10px;" onclick="sendTestSms(${i})">Тест</button></td>
+    <td><button class="sms-del-btn" onclick="delEmployee(${i})" title="Удалить">🗑</button></td>
+  </tr>`).join('');
+}
+function addEmployee() {
+  const nameEl = document.getElementById('sms-new-name');
+  const phoneEl = document.getElementById('sms-new-phone');
+  const name = nameEl.value.trim();
+  let phone = phoneEl.value.trim().replace(/[\s\-\(\)]/g, '');
+  if (!name) { ntf('Введите ФИО сотрудника', true); return; }
+  if (!phone) { ntf('Введите номер телефона', true); return; }
+  // Normalize phone
+  if (phone.startsWith('8') && phone.length === 11) phone = '+7' + phone.slice(1);
+  if (phone.startsWith('7') && phone.length === 11) phone = '+' + phone;
+  if (!phone.startsWith('+7') || phone.length !== 12) {
+    ntf('Формат номера: +7XXXXXXXXXX', true); return;
+  }
+  const emps = loadEmployees();
+  // Check duplicate
+  if (emps.some(e => e.name.toLowerCase() === name.toLowerCase())) {
+    ntf('Сотрудник с таким ФИО уже есть', true); return;
+  }
+  emps.push({ name, phone });
+  emps.sort((a,b) => a.name.localeCompare(b.name, 'ru'));
+  saveEmployees(emps);
+  nameEl.value = ''; phoneEl.value = '';
+  ntf(`${name} добавлен в справочник`);
+}
+function delEmployee(i) {
+  const emps = loadEmployees();
+  if (!confirm(`Удалить ${emps[i]?.name} из справочника?`)) return;
+  emps.splice(i, 1);
+  saveEmployees(emps);
+}
+function autoFillEmployees() {
+  const emps = loadEmployees();
+  const existing = new Set(emps.map(e => e.name.toLowerCase()));
+  // Collect all unique responsible names from all branches
+  const allNames = new Set();
+  ['tasks_nvt', 'tasks_nyg'].forEach(key => {
+    try {
+      const t = JSON.parse(localStorage.getItem(key) || '[]');
+      t.forEach(task => {
+        if (task.responsible && task.responsible.trim()) allNames.add(task.responsible.trim());
+      });
+    } catch(e) {}
+  });
+  let added = 0;
+  allNames.forEach(name => {
+    if (!existing.has(name.toLowerCase())) {
+      emps.push({ name, phone: '' });
+      added++;
+    }
+  });
+  if (added) {
+    emps.sort((a,b) => a.name.localeCompare(b.name, 'ru'));
+    saveEmployees(emps);
+    ntf(`Добавлено ${added} сотрудников (заполните номера телефонов)`);
+  } else {
+    ntf('Все исполнители уже в справочнике', false, 'ℹ');
+  }
+}
+function exportEmployees() {
+  const emps = loadEmployees();
+  if (!emps.length) { ntf('Справочник пуст', true); return; }
+  const csv = 'ФИО;Телефон\n' + emps.map(e => `${e.name};${e.phone}`).join('\n');
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'sms_employees.csv';
+  a.click(); URL.revokeObjectURL(a.href);
+  ntf('Справочник экспортирован');
+}
+
+// ── SMS SENDING via SMS.ru ───────────────────────
+function findEmployeePhone(responsibleName) {
+  if (!responsibleName) return null;
+  const emps = loadEmployees();
+  const name = responsibleName.trim().toLowerCase();
+  const emp = emps.find(e => e.name.toLowerCase() === name);
+  if (emp && emp.phone) return emp.phone;
+  // Partial match: "Иванов А.В." matches "Иванов"
+  const surname = name.split(/\s/)[0];
+  const partial = emps.find(e => e.name.toLowerCase().startsWith(surname) && e.phone);
+  return partial ? partial.phone : null;
+}
+
+async function sendSms(phone, message) {
+  const s = loadSmsSettings();
+  if (!s.apiKey) return { ok: false, error: 'API-ключ не настроен' };
+  // Clean phone number
+  const to = phone.replace(/[^0-9]/g, '');
+  const msg = encodeURIComponent(message);
+  const url = `https://sms.ru/sms/send?api_id=${s.apiKey}&to=${to}&msg=${msg}&json=1`;
+
+  try {
+    const resp = await fetch(url);
+    const data = await resp.json();
+    if (data.status === 'OK') {
+      const phoneData = data.sms && data.sms[to];
+      if (phoneData && phoneData.status === 'OK') {
+        return { ok: true, sms_id: phoneData.sms_id };
+      } else {
+        return { ok: false, error: phoneData?.status_text || 'Ошибка отправки' };
+      }
+    }
+    return { ok: false, error: data.status_text || 'Ошибка API' };
+  } catch(e) {
+    // Fallback: try JSONP approach for CORS issues
+    return await sendSmsJsonp(s.apiKey, to, message);
+  }
+}
+
+function sendSmsJsonp(apiKey, to, message) {
+  return new Promise(resolve => {
+    const cbName = '_smsRuCb_' + Date.now();
+    const script = document.createElement('script');
+    const msg = encodeURIComponent(message);
+    script.src = `https://sms.ru/sms/send?api_id=${apiKey}&to=${to}&msg=${msg}&json=1&callback=${cbName}`;
+    window[cbName] = function(data) {
+      delete window[cbName];
+      document.body.removeChild(script);
+      if (data && data.status === 'OK') {
+        resolve({ ok: true });
+      } else {
+        resolve({ ok: false, error: data?.status_text || 'Ошибка JSONP' });
+      }
+    };
+    script.onerror = () => {
+      delete window[cbName];
+      document.body.removeChild(script);
+      resolve({ ok: false, error: 'Сетевая ошибка. Проверьте подключение.' });
+    };
+    document.body.appendChild(script);
+    // Timeout after 15s
+    setTimeout(() => {
+      if (window[cbName]) {
+        delete window[cbName];
+        try { document.body.removeChild(script); } catch(e){}
+        resolve({ ok: false, error: 'Таймаут запроса' });
+      }
+    }, 15000);
+  });
+}
+
+async function checkSmsBalance() {
+  const s = loadSmsSettings();
+  const apiKey = document.getElementById('sms-api-key').value.trim() || s.apiKey;
+  if (!apiKey) { ntf('Введите API-ключ', true); return; }
+  const el = document.getElementById('smsBalanceInfo');
+  el.style.display = 'inline-flex';
+  el.textContent = 'Проверяю...';
+  try {
+    const resp = await fetch(`https://sms.ru/my/balance?api_id=${apiKey}&json=1`);
+    const data = await resp.json();
+    if (data.status === 'OK') {
+      el.textContent = `Баланс: ${data.balance} руб.`;
+      el.style.background = 'rgba(5,150,105,.1)';
+      el.style.color = 'var(--ok)';
+    } else {
+      el.textContent = `Ошибка: ${data.status_text || 'Неверный ключ'}`;
+      el.style.background = 'rgba(220,38,38,.1)';
+      el.style.color = 'var(--err)';
+    }
+  } catch(e) {
+    el.textContent = 'Ошибка сети';
+    el.style.background = 'rgba(220,38,38,.1)';
+    el.style.color = 'var(--err)';
+  }
+}
+
+function sendTestSms(empIdx) {
+  const emps = loadEmployees();
+  const emp = emps[empIdx];
+  if (!emp) return;
+  if (!emp.phone) { ntf('Укажите номер телефона сотрудника', true); return; }
+  const msg = `Тестовое сообщение из системы "Контроль поручений". Если вы получили это SMS — уведомления настроены корректно.`;
+  sendSms(emp.phone, msg).then(res => {
+    addSmsLog(emp.name, emp.phone, 'Тестовое SMS', res.ok, res.error);
+    if (res.ok) ntf(`Тестовое SMS отправлено: ${emp.name}`);
+    else ntf(`Ошибка: ${res.error}`, true);
+  });
+}
+
+// ── SMS LOG ──────────────────────────────────────
+function loadSmsLog() {
+  try { return JSON.parse(localStorage.getItem(SMS_LOG_KEY)) || []; } catch(e) { return []; }
+}
+function addSmsLog(name, phone, event, ok, error) {
+  const log = loadSmsLog();
+  log.unshift({
+    time: new Date().toISOString(),
+    name, phone, event,
+    ok, error: error || ''
+  });
+  // Keep last 100 entries
+  if (log.length > 100) log.length = 100;
+  localStorage.setItem(SMS_LOG_KEY, JSON.stringify(log));
+  renderSmsLog();
+}
+function renderSmsLog() {
+  const log = loadSmsLog();
+  const el = document.getElementById('smsLog');
+  if (!log.length) {
+    el.innerHTML = '<div style="text-align:center; padding:16px; color:var(--g400); font-size:13px;">Нет записей</div>';
+    return;
+  }
+  el.innerHTML = log.slice(0, 50).map(l => {
+    const d = new Date(l.time);
+    const time = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+    const date = `${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}`;
+    return `<div class="sms-log-item ${l.ok ? 'ok' : 'err'}">
+      <span class="sms-time">${date} ${time}</span>
+      <span class="sms-msg">${l.ok ? '✅' : '❌'} <strong>${esc(l.name)}</strong> — ${esc(l.event)}${l.error ? ` (${esc(l.error)})` : ''}</span>
+    </div>`;
+  }).join('');
+}
+function clearSmsLog() {
+  if (!confirm('Очистить журнал SMS?')) return;
+  localStorage.removeItem(SMS_LOG_KEY);
+  renderSmsLog();
+  ntf('Журнал очищен');
+}
+
+// ── NOTIFICATION TRIGGERS ────────────────────────
+function smsOnNewTask(taskObj) {
+  const s = loadSmsSettings();
+  if (!s.apiKey || !s.evtNew) return;
+  const phone = findEmployeePhone(taskObj.responsible);
+  if (!phone) return;
+  const branch = BRANCHES[currentBranch].name;
+  const deadline = taskObj.datePlan ? `. Срок: ${fmtD(taskObj.datePlan)}` : '';
+  const msg = `[${branch}] Вам назначено поручение: ${(taskObj.task || '').slice(0, 120)}${deadline}`;
+  sendSms(phone, msg).then(res => {
+    addSmsLog(taskObj.responsible, phone, 'Новое поручение', res.ok, res.error);
+  });
+}
+
+function smsOnStatusChange(taskObj, oldStatus, newStatus) {
+  const s = loadSmsSettings();
+  if (!s.apiKey || !s.evtStatus) return;
+  const phone = findEmployeePhone(taskObj.responsible);
+  if (!phone) return;
+  const branch = BRANCHES[currentBranch].name;
+  const msg = `[${branch}] Статус поручения изменён: "${newStatus}". Поручение: ${(taskObj.task || '').slice(0, 100)}`;
+  sendSms(phone, msg).then(res => {
+    addSmsLog(taskObj.responsible, phone, `Статус → ${newStatus}`, res.ok, res.error);
+  });
+}
+
+// ── DEADLINE CHECKER ─────────────────────────────
+function getTodayStr() {
+  return new Date().toISOString().split('T')[0];
+}
+function getSentToday() {
+  try {
+    const data = JSON.parse(localStorage.getItem(SMS_SENT_KEY) || '{}');
+    if (data.date !== getTodayStr()) return {};
+    return data.sent || {};
+  } catch(e) { return {}; }
+}
+function markSentToday(taskId, type) {
+  const data = { date: getTodayStr(), sent: getSentToday() };
+  data.sent[`${taskId}_${type}`] = true;
+  localStorage.setItem(SMS_SENT_KEY, JSON.stringify(data));
+}
+
+async function checkDeadlinesNow() {
+  const s = loadSmsSettings();
+  if (!s.apiKey) { ntf('Настройте API-ключ SMS.ru', true); return; }
+  const warnDays = s.warnDays || 3;
+  const today = new Date(); today.setHours(0,0,0,0);
+  const warnDate = new Date(today);
+  warnDate.setDate(warnDate.getDate() + warnDays);
+  const sent = getSentToday();
+  let countWarn = 0, countOver = 0;
+
+  // Check both branches
+  for (const bKey of ['tasks_nvt', 'tasks_nyg']) {
+    let branchTasks = [];
+    try { branchTasks = JSON.parse(localStorage.getItem(bKey) || '[]'); } catch(e) { continue; }
+    const branchName = bKey === 'tasks_nvt' ? 'Нижневартовск' : 'Нягань';
+
+    for (const t of branchTasks) {
+      if (!t.datePlan || t.status === 'Исполнено' || t.status === 'Снято с контроля') continue;
+      const plan = new Date(t.datePlan); plan.setHours(0,0,0,0);
+      const phone = findEmployeePhone(t.responsible);
+      if (!phone) continue;
+
+      // Check overdue
+      if (s.evtOver && plan < today) {
+        const key = `${t.id}_over`;
+        if (!sent[key]) {
+          const daysOver = Math.round((today - plan) / 864e5);
+          const msg = `[${branchName}] ПРОСРОЧЕНО (${daysOver} дн.)! Поручение: ${(t.task||'').slice(0,100)}. Срок был: ${fmtD(t.datePlan)}`;
+          const res = await sendSms(phone, msg);
+          addSmsLog(t.responsible, phone, `Просрочка (${daysOver} дн.)`, res.ok, res.error);
+          markSentToday(t.id, 'over');
+          countOver++;
+          await new Promise(r => setTimeout(r, 500)); // rate limit
+        }
+      }
+      // Check approaching deadline
+      else if (s.evtWarn && plan > today && plan <= warnDate) {
+        const key = `${t.id}_warn`;
+        if (!sent[key]) {
+          const daysLeft = Math.round((plan - today) / 864e5);
+          const msg = `[${branchName}] Срок поручения через ${daysLeft} дн. (${fmtD(t.datePlan)}): ${(t.task||'').slice(0,100)}`;
+          const res = await sendSms(phone, msg);
+          addSmsLog(t.responsible, phone, `Срок через ${daysLeft} дн.`, res.ok, res.error);
+          markSentToday(t.id, 'warn');
+          countWarn++;
+          await new Promise(r => setTimeout(r, 500)); // rate limit
+        }
+      }
+    }
+  }
+
+  if (countWarn || countOver) {
+    ntf(`Отправлено: ${countWarn} напоминаний, ${countOver} просрочек`, false, '📨');
+  } else {
+    ntf('Нет поручений для отправки уведомлений', false, 'ℹ');
+  }
+}
+
+// Auto-check deadlines on page load (once per day)
+function autoCheckDeadlines() {
+  const s = loadSmsSettings();
+  if (!s.apiKey) return;
+  const lastCheck = localStorage.getItem('sms_last_auto_check');
+  const todayStr = getTodayStr();
+  if (lastCheck === todayStr) return; // Already checked today
+  localStorage.setItem('sms_last_auto_check', todayStr);
+  // Delay the check to let Firebase sync first
+  setTimeout(() => checkDeadlinesNow(), 5000);
+}
+
+// ── FIREBASE SYNC for SMS data ───────────────────
+function initSmsFBSync() {
+  db.ref('sms_settings').on('value', snap => {
+    const data = snap.val();
+    if (data && data.apiKey) {
+      localStorage.setItem(SMS_SETTINGS_KEY, JSON.stringify(data));
+      restoreSmsSettings();
+    }
+  });
+  db.ref('sms_employees').on('value', snap => {
+    const data = snap.val();
+    if (data && Array.isArray(data)) {
+      localStorage.setItem(SMS_EMPLOYEES_KEY, JSON.stringify(data));
+      renderEmployees();
+    }
+  });
+}
+
+// ═══════════════════════════════════════════════════
 // INIT
 // ═══════════════════════════════════════════════════
 document.addEventListener('DOMContentLoaded', () => {
@@ -1790,9 +2345,57 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('f-date').value = new Date().toISOString().split('T')[0];
   document.getElementById('yearSel').value = new Date().getFullYear();
   renderAll();
+  // SMS module init
+  restoreSmsSettings();
+  renderEmployees();
+  renderSmsLog();
+  initSmsFBSync();
+  autoCheckDeadlines();
 });
 </script>
 
 <script src="https://unpkg.com/tesseract.js@4.1.1/dist/tesseract.min.js"></script>
+
+<style>
+/* ─── SMS MODULE STYLES ─── */
+.sms-setup { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+@media(max-width:900px){ .sms-setup { grid-template-columns:1fr; } }
+.sms-api-card { background:#fff; border-radius:var(--r); padding:24px; box-shadow:var(--sh); }
+.sms-api-card .card-title { display:flex; align-items:center; gap:8px; font-size:16px; font-weight:700; margin-bottom:6px; }
+.sms-api-card .card-desc { font-size:13px; color:var(--g400); margin-bottom:16px; }
+.sms-emp-tbl { width:100%; border-collapse:collapse; font-size:13px; }
+.sms-emp-tbl th { text-align:left; padding:8px 10px; background:var(--g100); color:var(--g600); font-weight:600; font-size:12px; border-bottom:2px solid var(--g200); }
+.sms-emp-tbl td { padding:8px 10px; border-bottom:1px solid var(--g200); vertical-align:middle; }
+.sms-emp-tbl tr:hover td { background:var(--c1l); }
+.sms-emp-tbl input { width:100%; border:1px solid var(--g200); border-radius:6px; padding:6px 10px; font-size:13px; font-family:inherit; }
+.sms-emp-tbl input:focus { border-color:var(--c1); outline:none; box-shadow:0 0 0 2px rgba(240,184,0,.15); }
+.sms-add-row { display:flex; gap:8px; margin-top:12px; flex-wrap:wrap; }
+.sms-add-row input { flex:1; min-width:120px; }
+.sms-log { max-height:260px; overflow-y:auto; font-size:12px; margin-top:12px; }
+.sms-log-item { display:flex; align-items:flex-start; gap:8px; padding:8px 10px; border-radius:8px; margin-bottom:4px; }
+.sms-log-item.ok { background:rgba(5,150,105,.08); }
+.sms-log-item.err { background:rgba(220,38,38,.08); }
+.sms-log-item .sms-time { font-size:11px; color:var(--g400); white-space:nowrap; min-width:50px; }
+.sms-log-item .sms-msg { color:var(--g800); }
+.sms-toggle { display:flex; align-items:center; gap:10px; margin:8px 0; }
+.sms-switch { position:relative; width:44px; height:24px; cursor:pointer; }
+.sms-switch input { opacity:0; width:0; height:0; }
+.sms-slider { position:absolute; top:0; left:0; right:0; bottom:0; background:var(--g200); border-radius:24px; transition:.3s; }
+.sms-slider::before { content:''; position:absolute; width:18px; height:18px; left:3px; bottom:3px; background:#fff; border-radius:50%; transition:.3s; }
+.sms-switch input:checked + .sms-slider { background:var(--ok); }
+.sms-switch input:checked + .sms-slider::before { transform:translateX(20px); }
+.sms-balance { display:inline-flex; align-items:center; gap:6px; padding:4px 12px; border-radius:50px; font-size:13px; font-weight:600; background:var(--g100); color:var(--g600); }
+.sms-evt-grid { display:grid; grid-template-columns:1fr auto; gap:8px 16px; align-items:center; }
+.sms-evt-label { font-size:13px; color:var(--g800); }
+.sms-test-btn { background:var(--c1); color:#1A1A1A; border:none; border-radius:8px; padding:8px 16px; font-size:13px; font-weight:600; cursor:pointer; font-family:inherit; transition:.2s; }
+.sms-test-btn:hover { background:var(--c1d); transform:translateY(-1px); }
+.sms-del-btn { background:none; border:none; cursor:pointer; font-size:16px; padding:2px 6px; border-radius:4px; }
+.sms-del-btn:hover { background:rgba(220,38,38,.1); }
+.sms-info { background:var(--c1l); border-radius:10px; padding:14px 16px; font-size:13px; color:var(--g600); margin-top:12px; line-height:1.6; }
+.sms-info strong { color:var(--g800); }
+.sms-badge-inline { display:inline-flex; align-items:center; gap:4px; padding:2px 8px; border-radius:50px; font-size:11px; font-weight:600; }
+.sms-badge-sent { background:rgba(5,150,105,.1); color:var(--ok); }
+.sms-badge-fail { background:rgba(220,38,38,.1); color:var(--err); }
+</style>
 </body>
 </html>
