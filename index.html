@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Контроль поручений</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 <style>
 :root {
   --c1: #F0B800; --c1d: #D4A200; --c1l: #FFFBEB; --c1ll: #FFF3CC;
@@ -454,6 +456,21 @@ th.sortable.desc::after { content: ' ↓'; color: var(--c1); }
 ::-webkit-scrollbar-thumb { background: var(--g200); border-radius: 10px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--g400); }
 
+/* ─── SYNC INDICATOR ─── */
+.sync-badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 4px 12px; border-radius: 50px; font-size: 11px;
+  font-weight: 600; margin-left: auto; white-space: nowrap;
+}
+.sync-ok { background: rgba(5,150,105,.25); color: #a7f3d0; }
+.sync-off { background: rgba(220,38,38,.3); color: #fca5a5; }
+.sync-wait { background: rgba(240,184,0,.25); color: #fde68a; }
+.sync-dot { width: 7px; height: 7px; border-radius: 50%; }
+.sync-dot-ok { background: #34d399; }
+.sync-dot-off { background: #f87171; }
+.sync-dot-wait { background: #fbbf24; animation: pulse 1s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+
 /* ─── PASSWORD SCREEN ─── */
 #auth-overlay {
   position: fixed; inset: 0; z-index: 9999;
@@ -505,6 +522,60 @@ th.sortable.desc::after { content: ' ↓'; color: var(--c1); }
     localStorage.setItem(SEED_KEY, '1');
   }
 })();
+</script>
+
+<script>
+// ═══════════════════════════════════════════════════
+// FIREBASE INIT
+// ═══════════════════════════════════════════════════
+const firebaseConfig = {
+  apiKey: "AIzaSyAVMbOmgB-0EGLT62xZk3yimqHpjceI0Rk",
+  authDomain: "porucheniya-48318.firebaseapp.com",
+  databaseURL: "https://porucheniya-48318-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "porucheniya-48318",
+  storageBucket: "porucheniya-48318.firebasestorage.app",
+  messagingSenderId: "923516205829",
+  appId: "1:923516205829:web:45845dcc5e311b07c8156c"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+let fbConnected = false;
+let fbListeners = {};
+
+// Track connection state
+db.ref('.info/connected').on('value', snap => {
+  fbConnected = !!snap.val();
+  updateSyncBadge();
+});
+
+function updateSyncBadge() {
+  const el = document.getElementById('syncBadge');
+  if (!el) return;
+  if (fbConnected) {
+    el.innerHTML = '<span class="sync-dot sync-dot-ok"></span> Синхронизация';
+    el.className = 'sync-badge sync-ok';
+  } else {
+    el.innerHTML = '<span class="sync-dot sync-dot-off"></span> Офлайн';
+    el.className = 'sync-badge sync-off';
+  }
+}
+
+// Seed Firebase from localStorage preloaded data (first time only)
+function seedFirebase() {
+  db.ref('tasks_nvt').once('value', snap => {
+    if (!snap.val() || snap.val().length === 0) {
+      const local = JSON.parse(localStorage.getItem('tasks_nvt') || '[]');
+      if (local.length > 0) db.ref('tasks_nvt').set(local);
+    }
+  });
+  db.ref('tasks_nyg').once('value', snap => {
+    if (!snap.val() || snap.val().length === 0) {
+      const local = JSON.parse(localStorage.getItem('tasks_nyg') || '[]');
+      if (local.length > 0) db.ref('tasks_nyg').set(local);
+    }
+  });
+}
+seedFirebase();
 </script>
 </head>
 <body>
@@ -572,6 +643,7 @@ document.addEventListener('DOMContentLoaded', () => {
       <button class="branch-btn on" id="btn-nvt" onclick="switchBranch('nvt')">🏙 Нижневартовск</button>
       <button class="branch-btn" id="btn-nyg" onclick="switchBranch('nyg')">🏙 Нягань</button>
     </div>
+    <div id="syncBadge" class="sync-badge sync-wait"><span class="sync-dot sync-dot-wait"></span> Подключение...</div>
 
     <!-- Year selector -->
     <div style="margin-left:auto; display:flex; align-items:center; gap:8px;">
@@ -952,10 +1024,36 @@ let tasks = [];
 function skKey() { return BRANCHES[currentBranch].key; }
 
 function loadTasks() {
+  // Load from localStorage as immediate cache
   try { tasks = JSON.parse(localStorage.getItem(skKey())) || []; } catch(e) { tasks = []; }
+  // Attach Firebase real-time listener for this branch
+  attachFBListener(skKey());
 }
+
+function attachFBListener(key) {
+  // Detach previous listener if exists
+  if (fbListeners[key]) return; // already attached
+  fbListeners[key] = true;
+  db.ref(key).on('value', snap => {
+    const fbData = snap.val();
+    if (fbData && Array.isArray(fbData)) {
+      localStorage.setItem(key, JSON.stringify(fbData));
+      // Only update UI if this is the active branch
+      if (key === skKey()) {
+        tasks = fbData;
+        renderAll();
+      }
+    }
+  });
+}
+
 function saveTasks() {
   localStorage.setItem(skKey(), JSON.stringify(tasks));
+  // Write to Firebase (triggers listener on all devices)
+  db.ref(skKey()).set(tasks).catch(err => {
+    console.warn('Firebase save error:', err);
+    ntf('Ошибка синхронизации — данные сохранены локально', true, '⚠️');
+  });
   renderAll();
 }
 function nxtId() { return tasks.length ? Math.max(...tasks.map(t => t.id)) + 1 : 1; }
@@ -967,6 +1065,7 @@ function switchBranch(b) {
   loadTasks();
   applyBranchUI();
   renderAll();
+  updateSyncBadge();
   ntf(`Переключено: ${BRANCHES[b].name}`, false, '🏙');
 }
 
@@ -1616,6 +1715,11 @@ function exportXLSX(mode) {
 
 function exportJSON() {
   const all = { nvt: JSON.parse(localStorage.getItem(BRANCHES.nvt.key)||'[]'), nyg: JSON.parse(localStorage.getItem(BRANCHES.nyg.key)||'[]') };
+  // Also try to get latest from Firebase cache
+  if (fbConnected) {
+    db.ref(BRANCHES.nvt.key).once('value', sn => { if(sn.val()) all.nvt = sn.val(); });
+    db.ref(BRANCHES.nyg.key).once('value', sn => { if(sn.val()) all.nyg = sn.val(); });
+  }
   const blob = new Blob([JSON.stringify(all,null,2)], {type:'application/json'});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
@@ -1633,8 +1737,8 @@ function importJSON(event) {
       if (Array.isArray(d)) { // old format: single branch
         tasks = d; saveTasks(); ntf(`Восстановлено ${tasks.length} поручений`);
       } else if (d.nvt || d.nyg) { // new format: both branches
-        if (d.nvt) localStorage.setItem(BRANCHES.nvt.key, JSON.stringify(d.nvt));
-        if (d.nyg) localStorage.setItem(BRANCHES.nyg.key, JSON.stringify(d.nyg));
+        if (d.nvt) { localStorage.setItem(BRANCHES.nvt.key, JSON.stringify(d.nvt)); db.ref(BRANCHES.nvt.key).set(d.nvt); }
+        if (d.nyg) { localStorage.setItem(BRANCHES.nyg.key, JSON.stringify(d.nyg)); db.ref(BRANCHES.nyg.key).set(d.nyg); }
         loadTasks(); renderAll();
         ntf(`Восстановлено НВТ: ${(d.nvt||[]).length}, НЯГ: ${(d.nyg||[]).length}`);
       } else throw new Error('Неверный формат');
