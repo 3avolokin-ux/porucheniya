@@ -453,6 +453,37 @@ th.sortable.desc::after { content: ' ↓'; color: var(--c1); }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--g200); border-radius: 10px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--g400); }
+
+/* ─── PASSWORD SCREEN ─── */
+#auth-overlay {
+  position: fixed; inset: 0; z-index: 9999;
+  background: linear-gradient(135deg, #1A1A1A 0%, #2D2D2D 100%);
+  display: flex; align-items: center; justify-content: center;
+}
+#auth-overlay.hidden { display: none; }
+.auth-box {
+  background: #fff; border-radius: 18px; padding: 44px 40px 36px;
+  box-shadow: 0 20px 60px rgba(0,0,0,.5);
+  text-align: center; max-width: 380px; width: 90%;
+}
+.auth-logo { font-size: 38px; margin-bottom: 8px; }
+.auth-title { font-size: 20px; font-weight: 700; color: #1A1A1A; margin-bottom: 4px; }
+.auth-sub { font-size: 13px; color: #94a3b8; margin-bottom: 28px; }
+.auth-input {
+  width: 100%; padding: 13px 16px; border: 2px solid #e2e8f0; border-radius: 12px;
+  font-size: 15px; outline: none; font-family: inherit; text-align: center;
+  letter-spacing: 1px; transition: .2s;
+}
+.auth-input:focus { border-color: #F0B800; box-shadow: 0 0 0 4px #FFF3CC; }
+.auth-input.err { border-color: #dc2626; box-shadow: 0 0 0 4px #fee2e2; animation: shake .4s ease; }
+@keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-8px)} 75%{transform:translateX(8px)} }
+.auth-btn {
+  width: 100%; margin-top: 16px; padding: 13px; border: none; border-radius: 12px;
+  background: #F0B800; color: #1A1A1A; font-size: 15px; font-weight: 700;
+  cursor: pointer; font-family: inherit; transition: .2s;
+}
+.auth-btn:hover { background: #D4A200; }
+.auth-err-msg { color: #dc2626; font-size: 13px; margin-top: 12px; min-height: 18px; }
 </style>
 
 <script>
@@ -477,6 +508,49 @@ th.sortable.desc::after { content: ' ↓'; color: var(--c1); }
 </script>
 </head>
 <body>
+
+<!-- ══════════════════ PASSWORD SCREEN ══════════════════ -->
+<div id="auth-overlay">
+  <div class="auth-box">
+    <div class="auth-logo">🔒</div>
+    <div class="auth-title">Контроль поручений</div>
+    <div class="auth-sub">Введите пароль для доступа</div>
+    <input class="auth-input" id="auth-pwd" type="password" placeholder="Пароль" autocomplete="off">
+    <button class="auth-btn" id="auth-go" onclick="checkAuth()">Войти</button>
+    <div class="auth-err-msg" id="auth-err"></div>
+  </div>
+</div>
+
+<script>
+const AUTH_HASH = 'faa6d5fa76cb3cdedd82cfa6303e6d1db79a96a3fca229164215f0b74889dfe2';
+async function sha256(str) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+  return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2,'0')).join('');
+}
+async function checkAuth() {
+  const pwd = document.getElementById('auth-pwd').value;
+  const hash = await sha256(pwd);
+  if (hash === AUTH_HASH) {
+    sessionStorage.setItem('auth_ok','1');
+    document.getElementById('auth-overlay').classList.add('hidden');
+  } else {
+    const inp = document.getElementById('auth-pwd');
+    inp.classList.add('err');
+    document.getElementById('auth-err').textContent = 'Неверный пароль';
+    setTimeout(() => inp.classList.remove('err'), 500);
+    inp.value = '';
+    inp.focus();
+  }
+}
+document.addEventListener('DOMContentLoaded', () => {
+  if (sessionStorage.getItem('auth_ok') === '1') {
+    document.getElementById('auth-overlay').classList.add('hidden');
+  }
+  document.getElementById('auth-pwd').addEventListener('keydown', e => {
+    if (e.key === 'Enter') checkAuth();
+  });
+});
+</script>
 
 <!-- ══════════════════ HEADER ══════════════════ -->
 <div class="hdr">
