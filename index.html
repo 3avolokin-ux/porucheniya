@@ -679,6 +679,10 @@ document.addEventListener('DOMContentLoaded', () => {
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>
     SMS-рассылка
   </button>
+  <button class="tb" onclick="showTab('tg',this)">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+    Telegram
+  </button>
 </div>
 
 <!-- ══════════════════ CONTENT ══════════════════ -->
@@ -953,6 +957,106 @@ document.addEventListener('DOMContentLoaded', () => {
         <button class="btn btn-r" style="margin-left:auto;" onclick="clrAll()">🗑️ Очистить данные филиала</button>
       </div>
       <input type="file" id="jsonIn" accept=".json" style="display:none" onchange="importJSON(event)">
+    </div>
+  </div>
+
+  <!-- ─── TAB: TELEGRAM ─── -->
+  <div id="tab-tg" class="tc">
+    <div class="sms-setup">
+      <!-- Left column: Bot settings -->
+      <div>
+        <div class="sms-api-card">
+          <div class="card-title">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#229ED9" stroke-width="2"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+            Настройки Telegram-бота
+          </div>
+          <div class="card-desc">Бот отправляет уведомления о поручениях в ваш Telegram-канал или чат</div>
+          <div class="fg" style="grid-template-columns:1fr;">
+            <div class="fld">
+              <label>Токен бота (от @BotFather)</label>
+              <div style="display:flex; gap:8px;">
+                <input class="fc" id="tg-bot-token" type="password" placeholder="123456:ABC-DEF..." style="flex:1;">
+                <button class="btn btn-s" onclick="toggleTgTokenVis()" title="Показать/скрыть" style="padding:8px 12px;">👁</button>
+              </div>
+            </div>
+            <div class="fld" style="margin-top:12px;">
+              <label>Chat ID (канал, группа или личный чат)</label>
+              <input class="fc" id="tg-chat-id" type="text" placeholder="-100XXXXXXXXXX">
+            </div>
+          </div>
+          <div style="display:flex; gap:10px; margin-top:12px; align-items:center; flex-wrap:wrap;">
+            <button class="btn btn-p" onclick="saveTgSettings()">Сохранить настройки</button>
+            <button class="sms-test-btn" style="background:#229ED9; color:#fff;" onclick="sendTestTg()">Тестовое сообщение</button>
+            <span id="tgTestInfo" class="sms-balance" style="display:none;"></span>
+          </div>
+          <div class="sms-info" style="background:#E8F4FD;">
+            <strong>Как настроить:</strong><br>
+            1. Создайте бота через <a href="https://t.me/BotFather" target="_blank" style="color:#229ED9;">@BotFather</a> → команда /newbot<br>
+            2. Скопируйте токен бота<br>
+            3. Добавьте бота в канал/группу или напишите ему /start<br>
+            4. Chat ID канала можно узнать через <a href="https://t.me/getmyid_bot" target="_blank" style="color:#229ED9;">@getmyid_bot</a>
+          </div>
+        </div>
+
+        <div class="sms-api-card" style="margin-top:20px;">
+          <div class="card-title">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#229ED9" stroke-width="2"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><path d="M12 6v6l4 2"/></svg>
+            События для уведомлений
+          </div>
+          <div class="card-desc">Выберите, о каких событиях отправлять Telegram-уведомления</div>
+          <div class="sms-evt-grid">
+            <span class="sms-evt-label">Новое поручение назначено</span>
+            <label class="sms-switch"><input type="checkbox" id="tg-evt-new" checked><span class="sms-slider" style=""></span></label>
+            <span class="sms-evt-label">Приближение срока</span>
+            <label class="sms-switch"><input type="checkbox" id="tg-evt-warn" checked><span class="sms-slider"></span></label>
+            <span class="sms-evt-label">Просрочка исполнения</span>
+            <label class="sms-switch"><input type="checkbox" id="tg-evt-over" checked><span class="sms-slider"></span></label>
+            <span class="sms-evt-label">Статус изменён (исполнено / снято)</span>
+            <label class="sms-switch"><input type="checkbox" id="tg-evt-status" checked><span class="sms-slider"></span></label>
+          </div>
+          <div style="margin-top:16px;">
+            <label style="font-size:13px; font-weight:600; color:var(--g600);">За сколько дней предупреждать о сроке:</label>
+            <select class="fc" id="tg-warn-days" style="width:auto; margin-top:4px;">
+              <option value="1">1 день</option>
+              <option value="2">2 дня</option>
+              <option value="3" selected>3 дня</option>
+              <option value="5">5 дней</option>
+              <option value="7">7 дней</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right column: Log & actions -->
+      <div>
+        <div class="sms-api-card">
+          <div class="card-title">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#229ED9" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+            Журнал отправки Telegram
+          </div>
+          <div class="card-desc">Последние Telegram-уведомления</div>
+          <div class="sms-log" id="tgLog">
+            <div style="text-align:center; padding:16px; color:var(--g400); font-size:13px;">Нет записей</div>
+          </div>
+          <div style="display:flex; gap:10px; margin-top:10px;">
+            <button class="sms-test-btn" style="background:#229ED9; color:#fff;" onclick="checkDeadlinesTg()">Проверить сроки сейчас</button>
+            <button class="btn btn-s" onclick="clearTgLog()" style="margin-left:auto;">Очистить журнал</button>
+          </div>
+        </div>
+
+        <div class="sms-api-card" style="margin-top:20px;">
+          <div class="card-title">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--g600)" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            Ежедневная сводка
+          </div>
+          <div class="card-desc">Отправлять утреннюю сводку по всем поручениям в Telegram</div>
+          <div class="sms-evt-grid">
+            <span class="sms-evt-label">Ежедневная сводка (при открытии приложения)</span>
+            <label class="sms-switch"><input type="checkbox" id="tg-evt-daily" checked><span class="sms-slider"></span></label>
+          </div>
+          <button class="sms-test-btn" style="background:#229ED9; color:#fff; margin-top:12px;" onclick="sendDailySummaryTg()">Отправить сводку сейчас</button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -1529,6 +1633,8 @@ function addTask(o) {
   saveTasks();
   // SMS notification for new task
   if (typeof smsOnNewTask === 'function') smsOnNewTask(newTask);
+  // Telegram notification for new task
+  if (typeof tgOnNewTask === 'function') tgOnNewTask(newTask);
 }
 
 function addManual() {
@@ -1566,6 +1672,10 @@ function cycleStatus(id) {
   if (typeof smsOnStatusChange === 'function' && t.status !== oldStatus) {
     smsOnStatusChange(t, oldStatus, t.status);
   }
+  // Telegram notification for status change
+  if (typeof tgOnStatusChange === 'function' && t.status !== oldStatus) {
+    tgOnStatusChange(t, oldStatus, t.status);
+  }
 }
 
 function delTask(id) {
@@ -1596,6 +1706,10 @@ function saveEdit() {
   // SMS notification if status changed
   if (typeof smsOnStatusChange === 'function' && t.status !== oldStatus) {
     smsOnStatusChange(t, oldStatus, t.status);
+  }
+  // Telegram notification if status changed
+  if (typeof tgOnStatusChange === 'function' && t.status !== oldStatus) {
+    tgOnStatusChange(t, oldStatus, t.status);
   }
 }
 function mClose(e) { if (e.target === e.currentTarget) document.getElementById('editModal').classList.remove('on'); }
@@ -1915,6 +2029,303 @@ function ntf(msg, err=false, ico='✓') {
   el.className = 'ntf ' + (err ? 'ntf-err' : 'ntf-ok');
   el.classList.add('on');
   ntfT = setTimeout(() => el.classList.remove('on'), 3200);
+}
+
+// ═══════════════════════════════════════════════════
+// TELEGRAM MODULE — Telegram Bot API integration
+// ═══════════════════════════════════════════════════
+const TG_SETTINGS_KEY = 'tg_settings';
+const TG_LOG_KEY = 'tg_log';
+const TG_SENT_KEY = 'tg_sent_today';
+
+// ── TG SETTINGS ─────────────────────────────────
+function loadTgSettings() {
+  try { return JSON.parse(localStorage.getItem(TG_SETTINGS_KEY)) || {}; } catch(e) { return {}; }
+}
+function saveTgSettings() {
+  const token = document.getElementById('tg-bot-token').value.trim();
+  const chatId = document.getElementById('tg-chat-id').value.trim();
+  if (!token) { ntf('Введите токен бота', true); return; }
+  if (!chatId) { ntf('Введите Chat ID', true); return; }
+  const settings = {
+    token, chatId,
+    evtNew: document.getElementById('tg-evt-new').checked,
+    evtWarn: document.getElementById('tg-evt-warn').checked,
+    evtOver: document.getElementById('tg-evt-over').checked,
+    evtStatus: document.getElementById('tg-evt-status').checked,
+    evtDaily: document.getElementById('tg-evt-daily').checked,
+    warnDays: +document.getElementById('tg-warn-days').value || 3,
+  };
+  localStorage.setItem(TG_SETTINGS_KEY, JSON.stringify(settings));
+  db.ref('tg_settings').set(settings).catch(() => {});
+  ntf('Telegram-настройки сохранены!');
+}
+function restoreTgSettings() {
+  const s = loadTgSettings();
+  if (s.token) document.getElementById('tg-bot-token').value = s.token;
+  if (s.chatId) document.getElementById('tg-chat-id').value = s.chatId;
+  if (s.evtNew !== undefined) document.getElementById('tg-evt-new').checked = s.evtNew;
+  if (s.evtWarn !== undefined) document.getElementById('tg-evt-warn').checked = s.evtWarn;
+  if (s.evtOver !== undefined) document.getElementById('tg-evt-over').checked = s.evtOver;
+  if (s.evtStatus !== undefined) document.getElementById('tg-evt-status').checked = s.evtStatus;
+  if (s.evtDaily !== undefined) document.getElementById('tg-evt-daily').checked = s.evtDaily;
+  if (s.warnDays) document.getElementById('tg-warn-days').value = s.warnDays;
+}
+function toggleTgTokenVis() {
+  const el = document.getElementById('tg-bot-token');
+  el.type = el.type === 'password' ? 'text' : 'password';
+}
+
+// ── SEND MESSAGE via Telegram Bot API ───────────
+async function sendTelegram(message, parseMode) {
+  const s = loadTgSettings();
+  if (!s.token || !s.chatId) return { ok: false, error: 'Telegram не настроен' };
+  const url = `https://api.telegram.org/bot${s.token}/sendMessage`;
+  const body = {
+    chat_id: s.chatId,
+    text: message,
+    parse_mode: parseMode || 'HTML',
+    disable_web_page_preview: true
+  };
+  try {
+    const resp = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    const data = await resp.json();
+    if (data.ok) return { ok: true, message_id: data.result.message_id };
+    return { ok: false, error: data.description || 'Ошибка API' };
+  } catch(e) {
+    return { ok: false, error: 'Сетевая ошибка: ' + e.message };
+  }
+}
+
+// ── TEST MESSAGE ────────────────────────────────
+async function sendTestTg() {
+  const token = document.getElementById('tg-bot-token').value.trim();
+  const chatId = document.getElementById('tg-chat-id').value.trim();
+  if (!token || !chatId) { ntf('Заполните токен и Chat ID', true); return; }
+  const el = document.getElementById('tgTestInfo');
+  el.style.display = 'inline-flex';
+  el.textContent = 'Отправляю...';
+  el.style.background = 'var(--g100)'; el.style.color = 'var(--g600)';
+
+  // Save settings first
+  const settings = loadTgSettings();
+  settings.token = token;
+  settings.chatId = chatId;
+  localStorage.setItem(TG_SETTINGS_KEY, JSON.stringify(settings));
+
+  const msg = '✅ <b>Контроль поручений</b>\n\nТестовое сообщение — Telegram-уведомления настроены корректно!';
+  const res = await sendTelegram(msg);
+  addTgLog('Система', 'Тестовое сообщение', res.ok, res.error);
+  if (res.ok) {
+    el.textContent = 'Отправлено!';
+    el.style.background = 'rgba(5,150,105,.1)'; el.style.color = 'var(--ok)';
+    ntf('Тестовое сообщение отправлено в Telegram!');
+  } else {
+    el.textContent = `Ошибка: ${res.error}`;
+    el.style.background = 'rgba(220,38,38,.1)'; el.style.color = 'var(--err)';
+    ntf(`Ошибка Telegram: ${res.error}`, true);
+  }
+}
+
+// ── TG LOG ──────────────────────────────────────
+function loadTgLog() {
+  try { return JSON.parse(localStorage.getItem(TG_LOG_KEY)) || []; } catch(e) { return []; }
+}
+function addTgLog(name, event, ok, error) {
+  const log = loadTgLog();
+  log.unshift({ time: new Date().toISOString(), name, event, ok, error: error || '' });
+  if (log.length > 100) log.length = 100;
+  localStorage.setItem(TG_LOG_KEY, JSON.stringify(log));
+  renderTgLog();
+}
+function renderTgLog() {
+  const log = loadTgLog();
+  const el = document.getElementById('tgLog');
+  if (!el) return;
+  if (!log.length) {
+    el.innerHTML = '<div style="text-align:center; padding:16px; color:var(--g400); font-size:13px;">Нет записей</div>';
+    return;
+  }
+  el.innerHTML = log.slice(0, 50).map(l => {
+    const d = new Date(l.time);
+    const time = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+    const date = `${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}`;
+    return `<div class="sms-log-item ${l.ok ? 'ok' : 'err'}">
+      <span class="sms-time">${date} ${time}</span>
+      <span class="sms-msg">${l.ok ? '✅' : '❌'} <strong>${esc(l.name)}</strong> — ${esc(l.event)}${l.error ? ` (${esc(l.error)})` : ''}</span>
+    </div>`;
+  }).join('');
+}
+function clearTgLog() {
+  if (!confirm('Очистить журнал Telegram?')) return;
+  localStorage.removeItem(TG_LOG_KEY);
+  renderTgLog();
+  ntf('Журнал Telegram очищен');
+}
+
+// ── NOTIFICATION TRIGGERS ───────────────────────
+function tgOnNewTask(taskObj) {
+  const s = loadTgSettings();
+  if (!s.token || !s.chatId || !s.evtNew) return;
+  const branch = BRANCHES[currentBranch].name;
+  const deadline = taskObj.datePlan ? `\n📅 Срок: <b>${fmtD(taskObj.datePlan)}</b>` : '';
+  const responsible = taskObj.responsible ? `\n👤 Ответственный: ${taskObj.responsible}` : '';
+  const msg = `📌 <b>[${branch}] Новое поручение</b>\n\n${(taskObj.task || '').slice(0, 300)}${responsible}${deadline}`;
+  sendTelegram(msg).then(res => {
+    addTgLog(taskObj.responsible || 'Не указан', 'Новое поручение', res.ok, res.error);
+  });
+}
+
+function tgOnStatusChange(taskObj, oldStatus, newStatus) {
+  const s = loadTgSettings();
+  if (!s.token || !s.chatId || !s.evtStatus) return;
+  const branch = BRANCHES[currentBranch].name;
+  const icon = newStatus === 'Исполнено' ? '✅' : newStatus === 'Снято с контроля' ? '🚫' : '🔄';
+  const msg = `${icon} <b>[${branch}] Статус изменён</b>\n\nПоручение: ${(taskObj.task || '').slice(0, 200)}\n👤 ${taskObj.responsible || '—'}\n📊 ${oldStatus} → <b>${newStatus}</b>`;
+  sendTelegram(msg).then(res => {
+    addTgLog(taskObj.responsible || '—', `Статус → ${newStatus}`, res.ok, res.error);
+  });
+}
+
+// ── DEADLINE CHECKER for Telegram ───────────────
+function getTgSentToday() {
+  try {
+    const data = JSON.parse(localStorage.getItem(TG_SENT_KEY) || '{}');
+    if (data.date !== getTodayStr()) return {};
+    return data.sent || {};
+  } catch(e) { return {}; }
+}
+function markTgSentToday(taskId, type) {
+  const data = { date: getTodayStr(), sent: getTgSentToday() };
+  data.sent[`${taskId}_${type}`] = true;
+  localStorage.setItem(TG_SENT_KEY, JSON.stringify(data));
+}
+
+async function checkDeadlinesTg() {
+  const s = loadTgSettings();
+  if (!s.token || !s.chatId) { ntf('Настройте Telegram-бота', true); return; }
+  const warnDays = s.warnDays || 3;
+  const today = new Date(); today.setHours(0,0,0,0);
+  const warnDate = new Date(today);
+  warnDate.setDate(warnDate.getDate() + warnDays);
+  const sent = getTgSentToday();
+  let countWarn = 0, countOver = 0;
+
+  for (const bKey of ['tasks_nvt', 'tasks_nyg']) {
+    let branchTasks = [];
+    try { branchTasks = JSON.parse(localStorage.getItem(bKey) || '[]'); } catch(e) { continue; }
+    const branchName = bKey === 'tasks_nvt' ? 'Нижневартовск' : 'Нягань';
+
+    for (const t of branchTasks) {
+      if (!t.datePlan || t.status === 'Исполнено' || t.status === 'Снято с контроля') continue;
+      const plan = new Date(t.datePlan); plan.setHours(0,0,0,0);
+
+      // Overdue
+      if (s.evtOver && plan < today) {
+        const key = `${t.id}_over`;
+        if (!sent[key]) {
+          const daysOver = Math.round((today - plan) / 864e5);
+          const msg = `🔴 <b>[${branchName}] ПРОСРОЧЕНО (${daysOver} дн.)</b>\n\n${(t.task||'').slice(0,200)}\n👤 ${t.responsible || '—'}\n📅 Срок был: ${fmtD(t.datePlan)}`;
+          const res = await sendTelegram(msg);
+          addTgLog(t.responsible || '—', `Просрочка (${daysOver} дн.)`, res.ok, res.error);
+          markTgSentToday(t.id, 'over');
+          countOver++;
+          await new Promise(r => setTimeout(r, 300));
+        }
+      }
+      // Approaching deadline
+      else if (s.evtWarn && plan > today && plan <= warnDate) {
+        const key = `${t.id}_warn`;
+        if (!sent[key]) {
+          const daysLeft = Math.round((plan - today) / 864e5);
+          const msg = `🟡 <b>[${branchName}] Срок через ${daysLeft} дн.</b> (${fmtD(t.datePlan)})\n\n${(t.task||'').slice(0,200)}\n👤 ${t.responsible || '—'}`;
+          const res = await sendTelegram(msg);
+          addTgLog(t.responsible || '—', `Срок через ${daysLeft} дн.`, res.ok, res.error);
+          markTgSentToday(t.id, 'warn');
+          countWarn++;
+          await new Promise(r => setTimeout(r, 300));
+        }
+      }
+    }
+  }
+
+  if (countWarn || countOver) {
+    ntf(`Telegram: отправлено ${countWarn} напоминаний, ${countOver} просрочек`, false, '📨');
+  } else {
+    ntf('Нет поручений для Telegram-уведомлений', false, 'ℹ');
+  }
+}
+
+// ── DAILY SUMMARY ───────────────────────────────
+async function sendDailySummaryTg() {
+  const s = loadTgSettings();
+  if (!s.token || !s.chatId) { ntf('Настройте Telegram-бота', true); return; }
+  const today = new Date(); today.setHours(0,0,0,0);
+  let lines = ['📊 <b>Ежедневная сводка — Контроль поручений</b>\n'];
+
+  for (const bKey of ['tasks_nvt', 'tasks_nyg']) {
+    let branchTasks = [];
+    try { branchTasks = JSON.parse(localStorage.getItem(bKey) || '[]'); } catch(e) { continue; }
+    const branchName = bKey === 'tasks_nvt' ? '🏙 Нижневартовск' : '🏔 Нягань';
+    let overdue = 0, upcoming = 0, inWork = 0, done = 0;
+
+    for (const t of branchTasks) {
+      const st = calcStatus(t);
+      if (st === 'Просрочено') overdue++;
+      else if (st === 'На исполнении') {
+        inWork++;
+        if (t.datePlan) {
+          const plan = new Date(t.datePlan); plan.setHours(0,0,0,0);
+          const daysLeft = Math.round((plan - today) / 864e5);
+          if (daysLeft >= 0 && daysLeft <= (s.warnDays || 3)) upcoming++;
+        }
+      }
+      else if (st === 'Исполнено' || st === 'Выполнено с нарушением срока') done++;
+    }
+
+    lines.push(`<b>${branchName}</b>`);
+    lines.push(`  🔴 Просрочено: <b>${overdue}</b>`);
+    lines.push(`  🟡 Срок скоро: <b>${upcoming}</b>`);
+    lines.push(`  🔵 На исполнении: <b>${inWork}</b>`);
+    lines.push(`  ✅ Исполнено: <b>${done}</b>`);
+    lines.push('');
+  }
+
+  lines.push(`📅 ${fmtD(today.toISOString().split('T')[0])}`);
+
+  const res = await sendTelegram(lines.join('\n'));
+  addTgLog('Система', 'Ежедневная сводка', res.ok, res.error);
+  if (res.ok) ntf('Сводка отправлена в Telegram!');
+  else ntf(`Ошибка: ${res.error}`, true);
+}
+
+// ── AUTO-CHECK on page load ─────────────────────
+function autoCheckDeadlinesTg() {
+  const s = loadTgSettings();
+  if (!s.token || !s.chatId) return;
+  const lastCheck = localStorage.getItem('tg_last_auto_check');
+  const todayStr = getTodayStr();
+  if (lastCheck === todayStr) return;
+  localStorage.setItem('tg_last_auto_check', todayStr);
+  setTimeout(() => {
+    checkDeadlinesTg();
+    if (s.evtDaily) setTimeout(() => sendDailySummaryTg(), 3000);
+  }, 6000);
+}
+
+// ── FIREBASE SYNC for TG data ───────────────────
+function initTgFBSync() {
+  db.ref('tg_settings').on('value', snap => {
+    const data = snap.val();
+    if (data && data.token) {
+      localStorage.setItem(TG_SETTINGS_KEY, JSON.stringify(data));
+      restoreTgSettings();
+    }
+  });
 }
 
 // ═══════════════════════════════════════════════════
@@ -2345,6 +2756,16 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('f-date').value = new Date().toISOString().split('T')[0];
   document.getElementById('yearSel').value = new Date().getFullYear();
   renderAll();
+  // Telegram module init
+  restoreTgSettings();
+  renderTgLog();
+  initTgFBSync();
+  // Seed default Telegram settings if empty
+  if (!loadTgSettings().token) {
+    document.getElementById('tg-bot-token').value = '8554716576:AAEhT7cbb0zPvNNyfiTNhAomBgAGhjZ7SGI';
+    document.getElementById('tg-chat-id').value = '-1003794050040';
+  }
+  autoCheckDeadlinesTg();
   // SMS module init
   restoreSmsSettings();
   renderEmployees();
