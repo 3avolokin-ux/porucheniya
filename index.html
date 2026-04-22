@@ -2037,11 +2037,14 @@ function ntf(msg, err=false, ico='✓') {
 // ═══════════════════════════════════════════════════
 const TG_SETTINGS_KEY = 'tg_settings';
 const TG_LOG_KEY = 'tg_log';
-const TG_SENT_KEY = 'tg_sent_today';
 
 // ── TG SETTINGS ─────────────────────────────────
 function loadTgSettings() {
-  try { return JSON.parse(localStorage.getItem(TG_SETTINGS_KEY)) || {}; } catch(e) { return {}; }
+  const defaults = { evtNew:true, evtWarn:true, evtOver:true, evtStatus:true, evtDaily:true, warnDays:3 };
+  try {
+    const saved = JSON.parse(localStorage.getItem(TG_SETTINGS_KEY)) || {};
+    return Object.assign({}, defaults, saved);
+  } catch(e) { return defaults; }
 }
 function saveTgSettings() {
   const token = document.getElementById('tg-bot-token').value.trim();
@@ -2210,19 +2213,6 @@ function tgOnStatusChange(taskObj, oldStatus, newStatus) {
 }
 
 // ── DEADLINE CHECKER for Telegram ───────────────
-function getTgSentToday() {
-  try {
-    const data = JSON.parse(localStorage.getItem(TG_SENT_KEY) || '{}');
-    if (data.date !== getTodayStr()) return {};
-    return data.sent || {};
-  } catch(e) { return {}; }
-}
-function markTgSentToday(taskId, type) {
-  const data = { date: getTodayStr(), sent: getTgSentToday() };
-  data.sent[`${taskId}_${type}`] = true;
-  localStorage.setItem(TG_SENT_KEY, JSON.stringify(data));
-}
-
 async function checkDeadlinesTg() {
   const s = loadTgSettings();
   if (!s.token || !s.chatId) { ntf('Настройте Telegram-бота', true); return; }
@@ -2230,8 +2220,10 @@ async function checkDeadlinesTg() {
   const today = new Date(); today.setHours(0,0,0,0);
   const warnDate = new Date(today);
   warnDate.setDate(warnDate.getDate() + warnDays);
-  const sent = getTgSentToday();
-  let countWarn = 0, countOver = 0;
+
+  // Collect tasks grouped by responsible person
+  // Structure: { "Иванов А.В.": { overdue: [{task, branch, days}], upcoming: [{task, branch, days}] } }
+  const byPerson = {};
 
   for (const bKey of ['tasks_nvt', 'tasks_nyg']) {
     let branchTasks = [];
@@ -2242,40 +2234,67 @@ async function checkDeadlinesTg() {
       const st = calcStatus(t);
       if (!t.datePlan || st === 'Исполнено' || st === 'Снято с контроля' || st === 'Выполнено с нарушением срока') continue;
       const plan = new Date(t.datePlan); plan.setHours(0,0,0,0);
+      const person = t.responsible || 'Не указан';
+
+      if (!byPerson[person]) byPerson[person] = { overdue: [], upcoming: [] };
 
       // Overdue
       if (s.evtOver && plan < today) {
-        const key = `${t.id}_over`;
-        if (!sent[key]) {
-          const daysOver = Math.round((today - plan) / 864e5);
-          const msg = `🔴 <b>[${branchName}] ПРОСРОЧЕНО (${daysOver} дн.)</b>\n\n${(t.task||'').slice(0,200)}\n👤 ${t.responsible || '—'}\n📅 Срок был: ${fmtD(t.datePlan)}`;
-          const res = await sendTelegram(msg);
-          addTgLog(t.responsible || '—', `Просрочка (${daysOver} дн.)`, res.ok, res.error);
-          markTgSentToday(t.id, 'over');
-          countOver++;
-          await new Promise(r => setTimeout(r, 300));
-        }
+        const daysOver = Math.round((today - plan) / 864e5);
+        byPerson[person].overdue.push({
+          task: (t.task || '').slice(0, 150),
+          branch: branchName,
+          days: daysOver,
+          datePlan: fmtD(t.datePlan)
+        });
       }
-      // Approaching deadline
-      else if (s.evtWarn && plan > today && plan <= warnDate) {
-        const key = `${t.id}_warn`;
-        if (!sent[key]) {
-          const daysLeft = Math.round((plan - today) / 864e5);
-          const msg = `🟡 <b>[${branchName}] Срок через ${daysLeft} дн.</b> (${fmtD(t.datePlan)})\n\n${(t.task||'').slice(0,200)}\n👤 ${t.responsible || '—'}`;
-          const res = await sendTelegram(msg);
-          addTgLog(t.responsible || '—', `Срок через ${daysLeft} дн.`, res.ok, res.error);
-          markTgSentToday(t.id, 'warn');
-          countWarn++;
-          await new Promise(r => setTimeout(r, 300));
-        }
+      // Approaching deadline (today included)
+      else if (s.evtWarn && plan >= today && plan <= warnDate) {
+        const daysLeft = Math.round((plan - today) / 864e5);
+        byPerson[person].upcoming.push({
+          task: (t.task || '').slice(0, 150),
+          branch: branchName,
+          days: daysLeft,
+          datePlan: fmtD(t.datePlan)
+        });
       }
     }
   }
 
-  if (countWarn || countOver) {
-    ntf(`Telegram: отправлено ${countWarn} напоминаний, ${countOver} просрочек`, false, '📨');
+  // Send one message per person
+  let totalSent = 0;
+  for (const [person, data] of Object.entries(byPerson)) {
+    if (!data.overdue.length && !data.upcoming.length) continue;
+
+    let msg = `👤 <b>${person}</b>\n`;
+
+    if (data.overdue.length) {
+      msg += `\n🔴 <b>Просроченные (${data.overdue.length}):</b>\n`;
+      data.overdue.sort((a, b) => b.days - a.days);
+      for (const item of data.overdue) {
+        msg += `• <i>[${item.branch}]</i> ${item.task}\n  ⏰ Просрочено ${item.days} дн. (срок: ${item.datePlan})\n`;
+      }
+    }
+
+    if (data.upcoming.length) {
+      msg += `\n🟡 <b>Исполнить в ближайшие ${warnDays} дн. (${data.upcoming.length}):</b>\n`;
+      data.upcoming.sort((a, b) => a.days - b.days);
+      for (const item of data.upcoming) {
+        const label = item.days === 0 ? 'СЕГОДНЯ' : item.days === 1 ? 'завтра' : `через ${item.days} дн.`;
+        msg += `• <i>[${item.branch}]</i> ${item.task}\n  📅 ${label} (${item.datePlan})\n`;
+      }
+    }
+
+    const res = await sendTelegram(msg);
+    addTgLog(person, `Просрочено: ${data.overdue.length}, Скоро: ${data.upcoming.length}`, res.ok, res.error);
+    totalSent++;
+    if (totalSent > 1) await new Promise(r => setTimeout(r, 300)); // rate limit
+  }
+
+  if (totalSent) {
+    ntf(`Telegram: отправлено ${totalSent} сообщений по исполнителям`, false, '📨');
   } else {
-    ntf('Нет поручений для Telegram-уведомлений', false, 'ℹ');
+    ntf('Нет активных просрочек или приближающихся сроков', false, 'ℹ');
   }
 }
 
@@ -2780,10 +2799,17 @@ document.addEventListener('DOMContentLoaded', () => {
   restoreTgSettings();
   renderTgLog();
   initTgFBSync();
-  // Seed default Telegram settings if empty
+  // Seed default Telegram settings if empty — save to localStorage + Firebase
   if (!loadTgSettings().token) {
-    document.getElementById('tg-bot-token').value = '8554716576:AAEhT7cbb0zPvNNyfiTNhAomBgAGhjZ7SGI';
-    document.getElementById('tg-chat-id').value = '-1003794050040';
+    const defaultTg = {
+      token: '8554716576:AAEhT7cbb0zPvNNyfiTNhAomBgAGhjZ7SGI',
+      chatId: '-1003794050040',
+      evtNew: true, evtWarn: true, evtOver: true, evtStatus: true, evtDaily: true,
+      warnDays: 3
+    };
+    localStorage.setItem(TG_SETTINGS_KEY, JSON.stringify(defaultTg));
+    db.ref('tg_settings').set(defaultTg).catch(() => {});
+    restoreTgSettings();
   }
   autoCheckDeadlinesTg();
   // SMS module init
