@@ -1006,17 +1006,17 @@ document.addEventListener('DOMContentLoaded', () => {
           <div class="card-desc">Выберите, о каких событиях отправлять Telegram-уведомления</div>
           <div class="sms-evt-grid">
             <span class="sms-evt-label">Новое поручение назначено</span>
-            <label class="sms-switch"><input type="checkbox" id="tg-evt-new" checked><span class="sms-slider" style=""></span></label>
+            <label class="sms-switch"><input type="checkbox" id="tg-evt-new" checked onchange="autoSaveTgEvents()"><span class="sms-slider" style=""></span></label>
             <span class="sms-evt-label">Приближение срока</span>
-            <label class="sms-switch"><input type="checkbox" id="tg-evt-warn" checked><span class="sms-slider"></span></label>
+            <label class="sms-switch"><input type="checkbox" id="tg-evt-warn" checked onchange="autoSaveTgEvents()"><span class="sms-slider"></span></label>
             <span class="sms-evt-label">Просрочка исполнения</span>
-            <label class="sms-switch"><input type="checkbox" id="tg-evt-over" checked><span class="sms-slider"></span></label>
+            <label class="sms-switch"><input type="checkbox" id="tg-evt-over" checked onchange="autoSaveTgEvents()"><span class="sms-slider"></span></label>
             <span class="sms-evt-label">Статус изменён (исполнено / снято)</span>
-            <label class="sms-switch"><input type="checkbox" id="tg-evt-status" checked><span class="sms-slider"></span></label>
+            <label class="sms-switch"><input type="checkbox" id="tg-evt-status" checked onchange="autoSaveTgEvents()"><span class="sms-slider"></span></label>
           </div>
           <div style="margin-top:16px;">
             <label style="font-size:13px; font-weight:600; color:var(--g600);">За сколько дней предупреждать о сроке:</label>
-            <select class="fc" id="tg-warn-days" style="width:auto; margin-top:4px;">
+            <select class="fc" id="tg-warn-days" style="width:auto; margin-top:4px;" onchange="autoSaveTgEvents()">
               <option value="1">1 день</option>
               <option value="2">2 дня</option>
               <option value="3" selected>3 дня</option>
@@ -1028,6 +1028,7 @@ document.addEventListener('DOMContentLoaded', () => {
       </div>
 
       <!-- Right column: Log & actions -->
+
       <div>
         <div class="sms-api-card">
           <div class="card-title">
@@ -1052,7 +1053,7 @@ document.addEventListener('DOMContentLoaded', () => {
           <div class="card-desc">Отправлять утреннюю сводку по всем поручениям в Telegram</div>
           <div class="sms-evt-grid">
             <span class="sms-evt-label">Ежедневная сводка (при открытии приложения)</span>
-            <label class="sms-switch"><input type="checkbox" id="tg-evt-daily" checked><span class="sms-slider"></span></label>
+            <label class="sms-switch"><input type="checkbox" id="tg-evt-daily" checked onchange="autoSaveTgEvents()"><span class="sms-slider"></span></label>
           </div>
           <button class="sms-test-btn" style="background:#229ED9; color:#fff; margin-top:12px;" onclick="sendDailySummaryTg()">Отправить сводку сейчас</button>
         </div>
@@ -2076,6 +2077,23 @@ function toggleTgTokenVis() {
   el.type = el.type === 'password' ? 'text' : 'password';
 }
 
+// Auto-save event settings on every toggle change → Firebase + localStorage
+function autoSaveTgEvents() {
+  const s = loadTgSettings();
+  s.evtNew = document.getElementById('tg-evt-new').checked;
+  s.evtWarn = document.getElementById('tg-evt-warn').checked;
+  s.evtOver = document.getElementById('tg-evt-over').checked;
+  s.evtStatus = document.getElementById('tg-evt-status').checked;
+  s.evtDaily = document.getElementById('tg-evt-daily').checked;
+  s.warnDays = +document.getElementById('tg-warn-days').value || 3;
+  // Keep token & chatId from existing settings
+  if (!s.token) s.token = document.getElementById('tg-bot-token').value.trim();
+  if (!s.chatId) s.chatId = document.getElementById('tg-chat-id').value.trim();
+  localStorage.setItem(TG_SETTINGS_KEY, JSON.stringify(s));
+  db.ref('tg_settings').set(s).catch(() => {});
+  ntf('Настройки уведомлений сохранены', false, '✅');
+}
+
 // ── SEND MESSAGE via Telegram Bot API ───────────
 async function sendTelegram(message, parseMode) {
   const s = loadTgSettings();
@@ -2221,7 +2239,8 @@ async function checkDeadlinesTg() {
     const branchName = bKey === 'tasks_nvt' ? 'Нижневартовск' : 'Нягань';
 
     for (const t of branchTasks) {
-      if (!t.datePlan || t.status === 'Исполнено' || t.status === 'Снято с контроля') continue;
+      const st = calcStatus(t);
+      if (!t.datePlan || st === 'Исполнено' || st === 'Снято с контроля' || st === 'Выполнено с нарушением срока') continue;
       const plan = new Date(t.datePlan); plan.setHours(0,0,0,0);
 
       // Overdue
@@ -2676,7 +2695,8 @@ async function checkDeadlinesNow() {
     const branchName = bKey === 'tasks_nvt' ? 'Нижневартовск' : 'Нягань';
 
     for (const t of branchTasks) {
-      if (!t.datePlan || t.status === 'Исполнено' || t.status === 'Снято с контроля') continue;
+      const st = calcStatus(t);
+      if (!t.datePlan || st === 'Исполнено' || st === 'Снято с контроля' || st === 'Выполнено с нарушением срока') continue;
       const plan = new Date(t.datePlan); plan.setHours(0,0,0,0);
       const phone = findEmployeePhone(t.responsible);
       if (!phone) continue;
