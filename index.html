@@ -1196,7 +1196,7 @@ document.addEventListener('DOMContentLoaded', () => {
       <div class="fld"><label>Руководитель</label><input class="fc" id="e-mgr"></div>
       <div class="fld"><label>Дата поручения</label><input class="fc" type="date" id="e-date"></div>
       <div class="fld"><label>Срок (план)</label><input class="fc" type="date" id="e-plan"></div>
-      <div class="fld"><label>Дата исполнения</label><input class="fc" type="date" id="e-fact"></div>
+      <div class="fld"><label>Дата исполнения</label><input class="fc" type="date" id="e-fact" onchange="if(this.value) document.getElementById('e-status').value='Исполнено'"></div>
       <div class="fld">
         <label>Статус</label>
         <select class="fc" id="e-status">
@@ -1313,8 +1313,8 @@ function applyBranchUI() {
 // ═══════════════════════════════════════════════════
 function calcStatus(t) {
   if (t.status === 'Снято с контроля') return 'Снято с контроля';
-  if (t.status === 'Исполнено') {
-    // Выполнено, но позже плановой даты
+  // Задача считается выполненной если статус = Исполнено ИЛИ заполнена дата факта
+  if (t.status === 'Исполнено' || t.dateFact) {
     if (t.datePlan && t.dateFact && t.dateFact > t.datePlan) return 'Выполнено с нарушением срока';
     return 'Исполнено';
   }
