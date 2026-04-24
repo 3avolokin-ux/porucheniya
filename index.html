@@ -57,6 +57,69 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f0f4f8;color:var(--
 body.branch-nyagan .branch-btn.on { background: var(--nyg); color: #fff; }
 body.branch-nyagan .hdr { background: linear-gradient(135deg, #1A1A1A 0%, #2D2D2D 100%); box-shadow: 0 2px 12px rgba(0,0,0,.4); }
 body.branch-nyagan { --c1: #E03720; --c1d: #C32D18; --c1l: #FFF1EE; --c1ll: #FDDDD8; }
+body.mode-project { --c1: #6366F1; --c1d: #4F46E5; --c1l: #EEF2FF; --c1ll: #E0E7FF; }
+body.mode-project .branch-btn.on { background: var(--c1); color: #fff; }
+
+/* Project switcher */
+.proj-sw { display:flex; align-items:center; gap:6px; margin-left:4px; }
+.proj-dropdown { position:relative; }
+.proj-toggle {
+  display:flex; align-items:center; gap:6px;
+  padding:5px 14px; border-radius:50px; border:none; cursor:pointer;
+  font-size:13px; font-weight:500; font-family:inherit;
+  background:rgba(255,255,255,.15); color:rgba(255,255,255,.85);
+  transition:.2s; white-space:nowrap;
+}
+.proj-toggle:hover { background:rgba(255,255,255,.25); color:#fff; }
+.proj-toggle.active { background:var(--c1); color:#1A1A1A; font-weight:700; }
+body.mode-project .proj-toggle.active { color:#fff; }
+.proj-menu {
+  display:none; position:absolute; top:calc(100% + 6px); left:0; min-width:280px;
+  background:#fff; border-radius:var(--r); box-shadow:var(--sh2);
+  z-index:200; overflow:hidden;
+}
+.proj-menu.open { display:block; }
+.proj-menu-head {
+  padding:12px 16px 8px; font-size:12px; font-weight:700; color:var(--g400);
+  text-transform:uppercase; letter-spacing:.5px;
+}
+.proj-item {
+  display:flex; align-items:center; gap:10px; padding:10px 16px;
+  cursor:pointer; transition:.15s; font-size:14px; color:var(--g800);
+}
+.proj-item:hover { background:var(--g100); }
+.proj-item.on { background:var(--c1l); color:var(--c1d); font-weight:600; }
+.proj-item .proj-cnt {
+  margin-left:auto; font-size:11px; font-weight:600; color:var(--g400);
+  background:var(--g100); padding:2px 8px; border-radius:50px;
+}
+.proj-item .proj-del {
+  opacity:0; border:none; background:none; cursor:pointer; font-size:14px;
+  padding:2px 4px; border-radius:4px; transition:.15s; margin-left:4px;
+}
+.proj-item:hover .proj-del { opacity:.5; }
+.proj-item .proj-del:hover { opacity:1; background:rgba(220,38,38,.1); }
+.proj-menu-add {
+  display:flex; gap:6px; padding:10px 12px; border-top:1px solid var(--g200);
+  background:var(--g50);
+}
+.proj-add-input {
+  flex:1; border:1px solid var(--g200); border-radius:8px; padding:7px 10px;
+  font-size:13px; font-family:inherit; outline:none;
+}
+.proj-add-input:focus { border-color:var(--c1); box-shadow:0 0 0 2px rgba(99,102,241,.15); }
+.proj-add-btn {
+  width:34px; height:34px; border:none; border-radius:8px;
+  background:var(--c1); color:#fff; font-size:18px; font-weight:700;
+  cursor:pointer; display:flex; align-items:center; justify-content:center;
+  transition:.15s;
+}
+.proj-add-btn:hover { background:var(--c1d); transform:scale(1.05); }
+.proj-back-btn {
+  font-size:12px !important; padding:4px 12px !important;
+  background:rgba(255,255,255,.1) !important; color:rgba(255,255,255,.7) !important;
+}
+.proj-back-btn:hover { background:rgba(255,255,255,.2) !important; color:#fff !important; }
 
 /* Stats row */
 .stats-row {
@@ -639,10 +702,33 @@ document.addEventListener('DOMContentLoaded', () => {
     </div>
 
     <!-- Branch switcher -->
-    <div class="branch-sw" role="group" aria-label="Выбор филиала">
+    <div class="branch-sw" role="group" aria-label="Выбор филиала" id="branchSwitcher">
       <button class="branch-btn on" id="btn-nvt" onclick="switchBranch('nvt')">🏙 Нижневартовск</button>
       <button class="branch-btn" id="btn-nyg" onclick="switchBranch('nyg')">🏙 Нягань</button>
     </div>
+
+    <!-- Project selector -->
+    <div class="proj-sw" id="projSwitcher">
+      <div class="proj-dropdown" id="projDropdown">
+        <button class="proj-toggle" id="projToggle" onclick="toggleProjMenu()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>
+          <span id="projLabel">Проекты</span>
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+        <div class="proj-menu" id="projMenu">
+          <div class="proj-menu-head">Проекты</div>
+          <div id="projList"></div>
+          <div class="proj-menu-add">
+            <input class="proj-add-input" id="projNewName" placeholder="Название проекта..." onkeydown="if(event.key==='Enter')addProject()">
+            <button class="proj-add-btn" onclick="addProject()" title="Создить проект">+</button>
+          </div>
+        </div>
+      </div>
+      <button class="branch-btn proj-back-btn" id="projBackBtn" onclick="switchToBranches()" style="display:none;" title="Вернуться к филиалам">
+        ← Филиалы
+      </button>
+    </div>
+
     <div id="syncBadge" class="sync-badge sync-wait"><span class="sync-dot sync-dot-wait"></span> Подключение...</div>
 
     <!-- Year selector -->
@@ -1287,7 +1373,17 @@ function saveTasks() {
 function nxtId() { return tasks.length ? Math.max(...tasks.map(t => t.id)) + 1 : 1; }
 
 function switchBranch(b) {
-  if (b === currentBranch) return;
+  if (b === currentBranch && !activeProject) return;
+  // Exit project mode if active
+  if (activeProject) {
+    activeProject = null;
+    localStorage.removeItem('activeProject');
+    document.getElementById('branchSwitcher').style.display = '';
+    document.getElementById('projBackBtn').style.display = 'none';
+    document.getElementById('projToggle').classList.remove('active');
+    document.getElementById('projLabel').textContent = 'Проекты';
+    document.body.classList.remove('mode-project');
+  }
   currentBranch = b;
   localStorage.setItem('activeBranch', b);
   loadTasks();
@@ -2033,6 +2129,186 @@ function ntf(msg, err=false, ico='✓') {
 }
 
 // ═══════════════════════════════════════════════════
+// PROJECTS MODULE
+// ═══════════════════════════════════════════════════
+const PROJECTS_KEY = 'projects_list';
+let activeProject = null; // null = branch mode, string = project id
+
+function loadProjects() {
+  try { return JSON.parse(localStorage.getItem(PROJECTS_KEY)) || []; } catch(e) { return []; }
+}
+function saveProjects(list) {
+  localStorage.setItem(PROJECTS_KEY, JSON.stringify(list));
+  db.ref('projects_list').set(list).catch(() => {});
+}
+
+function addProject() {
+  const inp = document.getElementById('projNewName');
+  const name = inp.value.trim();
+  if (!name) { ntf('Введите название проекта', true); return; }
+  const projects = loadProjects();
+  const id = 'proj_' + Date.now();
+  if (projects.some(p => p.name.toLowerCase() === name.toLowerCase())) {
+    ntf('Проект с таким названием уже есть', true); return;
+  }
+  projects.push({ id, name, created: new Date().toISOString() });
+  saveProjects(projects);
+  inp.value = '';
+  renderProjMenu();
+  switchToProject(id);
+  ntf(`Проект «${name}» создан`);
+}
+
+function deleteProject(id) {
+  const projects = loadProjects();
+  const proj = projects.find(p => p.id === id);
+  if (!proj) return;
+  if (!confirm(`Удалить проект «${proj.name}» и все его поручения?`)) return;
+  const updated = projects.filter(p => p.id !== id);
+  saveProjects(updated);
+  // Remove tasks from Firebase + localStorage
+  const key = 'tasks_' + id;
+  localStorage.removeItem(key);
+  db.ref(key).remove().catch(() => {});
+  // If this project was active, go back to branches
+  if (activeProject === id) switchToBranches();
+  renderProjMenu();
+  ntf(`Проект «${proj.name}» удалён`);
+}
+
+function renderProjMenu() {
+  const projects = loadProjects();
+  const el = document.getElementById('projList');
+  if (!projects.length) {
+    el.innerHTML = '<div style="padding:12px 16px; font-size:13px; color:var(--g400); text-align:center;">Нет проектов</div>';
+    return;
+  }
+  el.innerHTML = projects.map(p => {
+    let cnt = 0;
+    try { cnt = JSON.parse(localStorage.getItem('tasks_' + p.id) || '[]').length; } catch(e) {}
+    const isOn = activeProject === p.id ? ' on' : '';
+    return `<div class="proj-item${isOn}" onclick="switchToProject('${p.id}')">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>
+      ${esc(p.name)}
+      <span class="proj-cnt">${cnt}</span>
+      <button class="proj-del" onclick="event.stopPropagation();deleteProject('${p.id}')" title="Удалить">🗑</button>
+    </div>`;
+  }).join('');
+}
+
+function toggleProjMenu() {
+  const menu = document.getElementById('projMenu');
+  const isOpen = menu.classList.contains('open');
+  menu.classList.toggle('open');
+  if (!isOpen) {
+    renderProjMenu();
+    // Close on outside click
+    setTimeout(() => {
+      document.addEventListener('click', closeProjMenuOut, { once: true });
+    }, 10);
+  }
+}
+function closeProjMenuOut(e) {
+  const dd = document.getElementById('projDropdown');
+  if (!dd.contains(e.target)) {
+    document.getElementById('projMenu').classList.remove('open');
+  } else {
+    document.addEventListener('click', closeProjMenuOut, { once: true });
+  }
+}
+
+function switchToProject(projId) {
+  const projects = loadProjects();
+  const proj = projects.find(p => p.id === projId);
+  if (!proj) return;
+
+  activeProject = projId;
+  localStorage.setItem('activeProject', projId);
+
+  // Register as dynamic branch
+  BRANCHES[projId] = { name: proj.name, short: proj.name.slice(0,6), key: 'tasks_' + projId };
+  currentBranch = projId;
+
+  // UI: hide branch buttons, show project mode
+  document.getElementById('branchSwitcher').style.display = 'none';
+  document.getElementById('projBackBtn').style.display = '';
+  document.getElementById('projToggle').classList.add('active');
+  document.getElementById('projLabel').textContent = proj.name;
+  document.getElementById('branchSub').textContent = '📁 ' + proj.name;
+  document.body.classList.remove('branch-nyagan');
+  document.body.classList.add('mode-project');
+
+  // Close menu
+  document.getElementById('projMenu').classList.remove('open');
+
+  // Load project tasks
+  loadTasks();
+  renderAll();
+  updateSyncBadge();
+  ntf(`Проект: ${proj.name}`, false, '📁');
+}
+
+function switchToBranches() {
+  activeProject = null;
+  localStorage.removeItem('activeProject');
+
+  // UI: show branch buttons, reset project mode
+  document.getElementById('branchSwitcher').style.display = '';
+  document.getElementById('projBackBtn').style.display = 'none';
+  document.getElementById('projToggle').classList.remove('active');
+  document.getElementById('projLabel').textContent = 'Проекты';
+  document.body.classList.remove('mode-project');
+
+  // Restore last active branch
+  currentBranch = localStorage.getItem('activeBranch') || 'nvt';
+  applyBranchUI();
+  loadTasks();
+  renderAll();
+  updateSyncBadge();
+}
+
+// Init projects from Firebase
+function initProjectsFBSync() {
+  db.ref('projects_list').on('value', snap => {
+    const data = snap.val();
+    if (data && Array.isArray(data)) {
+      localStorage.setItem(PROJECTS_KEY, JSON.stringify(data));
+      // Also attach listeners for each project's tasks
+      data.forEach(p => attachFBListener('tasks_' + p.id));
+      if (document.getElementById('projMenu').classList.contains('open')) renderProjMenu();
+    }
+  });
+}
+
+// Restore project state on load
+function restoreProjectState() {
+  const savedProj = localStorage.getItem('activeProject');
+  if (savedProj) {
+    const projects = loadProjects();
+    if (projects.find(p => p.id === savedProj)) {
+      switchToProject(savedProj);
+      return true;
+    } else {
+      localStorage.removeItem('activeProject');
+    }
+  }
+  return false;
+}
+
+// Helper: get all task sources (branches + projects) with display names
+function getAllTaskSources() {
+  const sources = [
+    { key: 'tasks_nvt', name: 'Нижневартовск' },
+    { key: 'tasks_nyg', name: 'Нягань' }
+  ];
+  const projects = loadProjects();
+  projects.forEach(p => {
+    sources.push({ key: 'tasks_' + p.id, name: '📁 ' + p.name });
+  });
+  return sources;
+}
+
+// ═══════════════════════════════════════════════════
 // TELEGRAM MODULE — Telegram Bot API integration
 // ═══════════════════════════════════════════════════
 const TG_SETTINGS_KEY = 'tg_settings';
@@ -2225,10 +2501,9 @@ async function checkDeadlinesTg() {
   // Structure: { "Иванов А.В.": { overdue: [{task, branch, days}], upcoming: [{task, branch, days}] } }
   const byPerson = {};
 
-  for (const bKey of ['tasks_nvt', 'tasks_nyg']) {
+  for (const src of getAllTaskSources()) {
     let branchTasks = [];
-    try { branchTasks = JSON.parse(localStorage.getItem(bKey) || '[]'); } catch(e) { continue; }
-    const branchName = bKey === 'tasks_nvt' ? 'Нижневартовск' : 'Нягань';
+    try { branchTasks = JSON.parse(localStorage.getItem(src.key) || '[]'); } catch(e) { continue; }
 
     for (const t of branchTasks) {
       const st = calcStatus(t);
@@ -2243,7 +2518,7 @@ async function checkDeadlinesTg() {
         const daysOver = Math.round((today - plan) / 864e5);
         byPerson[person].overdue.push({
           task: (t.task || '').slice(0, 150),
-          branch: branchName,
+          branch: src.name,
           days: daysOver,
           datePlan: fmtD(t.datePlan)
         });
@@ -2253,7 +2528,7 @@ async function checkDeadlinesTg() {
         const daysLeft = Math.round((plan - today) / 864e5);
         byPerson[person].upcoming.push({
           task: (t.task || '').slice(0, 150),
-          branch: branchName,
+          branch: src.name,
           days: daysLeft,
           datePlan: fmtD(t.datePlan)
         });
@@ -2305,10 +2580,10 @@ async function sendDailySummaryTg() {
   const today = new Date(); today.setHours(0,0,0,0);
   let lines = ['📊 <b>Ежедневная сводка — Контроль поручений</b>\n'];
 
-  for (const bKey of ['tasks_nvt', 'tasks_nyg']) {
+  for (const src of getAllTaskSources()) {
     let branchTasks = [];
-    try { branchTasks = JSON.parse(localStorage.getItem(bKey) || '[]'); } catch(e) { continue; }
-    const branchName = bKey === 'tasks_nvt' ? '🏙 Нижневартовск' : '🏔 Нягань';
+    try { branchTasks = JSON.parse(localStorage.getItem(src.key) || '[]'); } catch(e) { continue; }
+    if (!branchTasks.length) continue;
     let overdue = 0, upcoming = 0, inWork = 0, done = 0;
 
     for (const t of branchTasks) {
@@ -2325,7 +2600,7 @@ async function sendDailySummaryTg() {
       else if (st === 'Исполнено' || st === 'Выполнено с нарушением срока') done++;
     }
 
-    lines.push(`<b>${branchName}</b>`);
+    lines.push(`<b>${src.name}</b>`);
     lines.push(`  🔴 Просрочено: <b>${overdue}</b>`);
     lines.push(`  🟡 Срок скоро: <b>${upcoming}</b>`);
     lines.push(`  🔵 На исполнении: <b>${inWork}</b>`);
@@ -2469,9 +2744,9 @@ function autoFillEmployees() {
   const existing = new Set(emps.map(e => e.name.toLowerCase()));
   // Collect all unique responsible names from all branches
   const allNames = new Set();
-  ['tasks_nvt', 'tasks_nyg'].forEach(key => {
+  getAllTaskSources().forEach(src => {
     try {
-      const t = JSON.parse(localStorage.getItem(key) || '[]');
+      const t = JSON.parse(localStorage.getItem(src.key) || '[]');
       t.forEach(task => {
         if (task.responsible && task.responsible.trim()) allNames.add(task.responsible.trim());
       });
@@ -2707,11 +2982,10 @@ async function checkDeadlinesNow() {
   const sent = getSentToday();
   let countWarn = 0, countOver = 0;
 
-  // Check both branches
-  for (const bKey of ['tasks_nvt', 'tasks_nyg']) {
+  // Check all sources (branches + projects)
+  for (const src of getAllTaskSources()) {
     let branchTasks = [];
-    try { branchTasks = JSON.parse(localStorage.getItem(bKey) || '[]'); } catch(e) { continue; }
-    const branchName = bKey === 'tasks_nvt' ? 'Нижневартовск' : 'Нягань';
+    try { branchTasks = JSON.parse(localStorage.getItem(src.key) || '[]'); } catch(e) { continue; }
 
     for (const t of branchTasks) {
       const st = calcStatus(t);
@@ -2725,7 +2999,7 @@ async function checkDeadlinesNow() {
         const key = `${t.id}_over`;
         if (!sent[key]) {
           const daysOver = Math.round((today - plan) / 864e5);
-          const msg = `[${branchName}] ПРОСРОЧЕНО (${daysOver} дн.)! Поручение: ${(t.task||'').slice(0,100)}. Срок был: ${fmtD(t.datePlan)}`;
+          const msg = `[${src.name}] ПРОСРОЧЕНО (${daysOver} дн.)! Поручение: ${(t.task||'').slice(0,100)}. Срок был: ${fmtD(t.datePlan)}`;
           const res = await sendSms(phone, msg);
           addSmsLog(t.responsible, phone, `Просрочка (${daysOver} дн.)`, res.ok, res.error);
           markSentToday(t.id, 'over');
@@ -2738,7 +3012,7 @@ async function checkDeadlinesNow() {
         const key = `${t.id}_warn`;
         if (!sent[key]) {
           const daysLeft = Math.round((plan - today) / 864e5);
-          const msg = `[${branchName}] Срок поручения через ${daysLeft} дн. (${fmtD(t.datePlan)}): ${(t.task||'').slice(0,100)}`;
+          const msg = `[${src.name}] Срок поручения через ${daysLeft} дн. (${fmtD(t.datePlan)}): ${(t.task||'').slice(0,100)}`;
           const res = await sendSms(phone, msg);
           addSmsLog(t.responsible, phone, `Срок через ${daysLeft} дн.`, res.ok, res.error);
           markSentToday(t.id, 'warn');
@@ -2790,8 +3064,13 @@ function initSmsFBSync() {
 // INIT
 // ═══════════════════════════════════════════════════
 document.addEventListener('DOMContentLoaded', () => {
-  applyBranchUI();
-  loadTasks();
+  // Projects init
+  initProjectsFBSync();
+  const restoredProject = restoreProjectState();
+  if (!restoredProject) {
+    applyBranchUI();
+    loadTasks();
+  }
   document.getElementById('f-date').value = new Date().toISOString().split('T')[0];
   document.getElementById('yearSel').value = new Date().getFullYear();
   renderAll();
