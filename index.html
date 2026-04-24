@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="icon" type="image/png" href="icon.png">
+<link rel="apple-touch-icon" href="icon.png">
 <title>Контроль поручений</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
@@ -383,168 +385,32 @@ body.branch-nyagan .stb.on { color: #fff; }
 .bi-nyg { background: #FDDDD8; color: #C32D18; }
 
 /* ─── RESPONSIVE ─── */
-/* ═══════════════════════════════════════════════════ */
-/* MOBILE ADAPTATION — iPhone 15 Pro Max (430px)      */
-/* ═══════════════════════════════════════════════════ */
-@media(max-width: 768px) {
-  /* ── Safe area for notch / Dynamic Island ── */
-  html { padding: env(safe-area-inset-top) env(safe-area-inset-right) 0 env(safe-area-inset-left); }
-
-  /* ── HEADER ── */
-  .hdr { padding: 0 12px; }
-  .hdr-top {
-    height: auto; padding: 10px 0; flex-wrap: wrap; gap: 8px;
-  }
-  .hdr-logo svg { width: 22px; height: 22px; }
-  .hdr-title { font-size: 16px; }
-  .hdr-subtitle { font-size: 12px; }
-  .branch-sw { order: 2; width: 100%; justify-content: stretch; }
-  .branch-btn { flex: 1; text-align: center; padding: 8px 10px; font-size: 14px; }
-  .proj-sw { order: 3; width: 100%; }
-  .proj-toggle { width: 100%; justify-content: center; padding: 8px 14px; font-size: 14px; }
-  .proj-menu { left: 0; right: 0; min-width: unset; }
-  .proj-back-btn { flex: 1; text-align: center; font-size: 14px !important; padding: 8px 10px !important; }
-  .sync-badge { order: 1; margin-left: auto; font-size: 10px; padding: 3px 8px; }
-  .stats-row { padding: 6px 12px; gap: 6px; }
-  .chip { font-size: 11px; padding: 3px 8px; }
-  .chip .num { font-size: 12px; }
-
-  /* Year selector in header */
-  .hdr-top > div:last-child { order: 1; margin-left: 0; }
-  .hdr-top > div:last-child select { font-size: 13px; min-width: 80px; }
-
-  /* ── TABS — horizontal scroll ── */
-  .tabs {
-    padding: 0 12px; overflow-x: auto; -webkit-overflow-scrolling: touch;
-    scrollbar-width: none; gap: 0;
-  }
+@media(max-width: 700px) {
+  .hdr-top { height: auto; padding: 12px 0; flex-direction: column; align-items: flex-start; gap: 10px; }
+  .hdr { padding: 0 16px; }
+  .stats-row { padding: 8px 16px; }
+  .tabs { padding: 0 16px; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
   .tabs::-webkit-scrollbar { display: none; }
-  .tb {
-    padding: 12px 14px; font-size: 13px; white-space: nowrap;
-    min-height: 44px; /* Apple HIG touch target */
-  }
+  .page { padding: 14px 16px; }
+  .stabs { flex-direction: column; }
+  .branch-sw { align-self: stretch; }
+  .branch-btn { flex: 1; text-align: center; }
+  .proj-sw { align-self: stretch; }
+  .proj-toggle { width: 100%; justify-content: center; }
+  .proj-menu { left: 0; right: 0; min-width: unset; }
+  .io2 { grid-template-columns: 1fr; }
+  .sms-setup { grid-template-columns: 1fr !important; }
+  .tbl-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 
-  /* ── PAGE CONTENT ── */
-  .page { padding: 12px; }
-
-  /* ── FILTER BAR ── */
-  .fbar { flex-direction: column; gap: 8px; padding: 10px; }
-  .fbar .fi { font-size: 14px; min-height: 40px; }
-  .fbar .msel-btn { min-height: 40px; font-size: 14px; }
-
-  /* ── INFOGRAPHIC ── */
-  .inf-row { grid-template-columns: 100px 1fr 70px 28px; gap: 6px; padding: 6px 4px; }
-  .inf-name { font-size: 11px; }
-  .inf-header { padding: 10px 12px 8px; }
-  .inf-body { padding: 6px 12px 10px; }
-  .inf-legend { gap: 8px; font-size: 10px; flex-wrap: wrap; }
-
-  /* ── TABLE → MOBILE CARDS ── */
-  .tbl-card { box-shadow: none; border: none; background: transparent; }
-  .tbl-card table thead { display: none; }
-  .tbl-card table, .tbl-card tbody, .tbl-card tr, .tbl-card td {
-    display: block; width: 100%;
-  }
-  .tbl-card tr {
-    background: #fff; border-radius: 12px; padding: 14px;
-    margin-bottom: 10px; box-shadow: var(--sh);
-    border-left: 4px solid var(--g200);
-    position: relative;
-  }
-  .tbl-card tr.ov { border-left-color: var(--err); background: #fff5f5; }
-  .tbl-card td { padding: 2px 0; border: none; font-size: 14px; }
-
-  /* Hide columns: №, дата назначения, дней — show via card layout */
-  .tbl-card td:nth-child(1),
-  .tbl-card td:nth-child(2),
-  .tbl-card td:nth-child(6) { display: none; }
-
-  /* Task text — full width, prominent */
-  .tbl-card td:nth-child(3) { /* task */
-    font-size: 14px; line-height: 1.4; margin-bottom: 8px;
-    max-width: 100% !important;
-  }
-  .tbl-card td:nth-child(3) .task-text {
-    white-space: normal; -webkit-line-clamp: unset;
-    max-height: none; overflow: visible;
-  }
-
-  /* Responsible — inline label */
-  .tbl-card td:nth-child(4) {
-    font-size: 13px; color: var(--g600);
-  }
-  .tbl-card td:nth-child(4)::before {
-    content: '👤 '; font-size: 12px;
-  }
-
-  /* Date plan */
-  .tbl-card td:nth-child(5) {
-    font-size: 13px;
-  }
-  .tbl-card td:nth-child(5)::before {
-    content: '📅 Срок: '; font-size: 12px; color: var(--g400);
-  }
-
-  /* Status badge */
-  .tbl-card td:nth-child(7) { margin-top: 8px; }
-  .tbl-card td:nth-child(7) .badge {
-    font-size: 13px; padding: 6px 14px;
-  }
-
-  /* Action buttons */
-  .tbl-card td:nth-child(8) {
-    position: absolute; top: 12px; right: 10px;
-  }
-  .tbl-card td:nth-child(8) .abt {
-    width: 36px; height: 36px; font-size: 16px;
-  }
-
-  /* ── CARDS (import/export etc.) ── */
-  .card { padding: 16px; }
-  .io2 { grid-template-columns: 1fr; gap: 12px; }
-
-  /* ── MODAL → fullscreen ── */
-  .mover { align-items: flex-end; } /* slide from bottom */
+  /* Modal — fullscreen on mobile */
+  .mover { align-items: flex-end; }
   .modal {
     width: 100%; max-width: 100%; margin: 0;
-    border-radius: 20px 20px 0 0;
+    border-radius: 16px 16px 0 0;
     max-height: 90vh; overflow-y: auto;
     -webkit-overflow-scrolling: touch;
-    padding: 20px 16px;
-    animation: slideUp .25s ease;
   }
-  @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
-  .modal .fg {
-    grid-template-columns: 1fr !important;
-    gap: 10px;
-  }
-  .modal .fc, .modal select {
-    min-height: 44px; font-size: 15px;
-  }
-  .modal .mac { flex-wrap: wrap; }
-  .modal .mac .btn { flex: 1; min-height: 44px; font-size: 15px; }
-  .mt { font-size: 18px; }
-
-  /* ── FORMS (add task) ── */
-  .fg { grid-template-columns: 1fr !important; }
-  .fc, select.fc, input.fc, textarea.fc {
-    min-height: 44px; font-size: 15px;
-  }
-  .btn { min-height: 44px; font-size: 14px; }
-  .stabs { flex-direction: column; gap: 6px; }
-  .stb { padding: 10px; font-size: 14px; }
-
-  /* ── SMS / Telegram setup ── */
-  .sms-setup { grid-template-columns: 1fr !important; }
-  .sms-api-card { padding: 16px; }
-  .sms-add-row { flex-direction: column; }
-  .sms-add-row input { min-width: 100%; }
-  .sms-evt-grid { gap: 10px 12px; }
-  .sms-evt-label { font-size: 14px; }
-  .sms-test-btn { min-height: 44px; font-size: 14px; }
-
-  /* ── DZ (drag zone for photos) ── */
-  .dz { padding: 24px 16px; }
+  .modal .fg { grid-template-columns: 1fr !important; }
 }
 
 /* ─── MULTI-SELECT СТАТУСОВ ─── */
