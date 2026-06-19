@@ -3567,5 +3567,170 @@ void main(void) {
   initShader(document.getElementById("authFx"), true, FS);
 })();
 </script>
+<style>
+#alina-fab{position:fixed;right:22px;bottom:calc(22px + env(safe-area-inset-bottom));width:60px;height:60px;border-radius:50%;background:linear-gradient(135deg,#F97316,#FBBF24);color:#1a1206;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:900;box-shadow:0 10px 30px rgba(249,140,30,.45);transition:transform .2s var(--ease);}
+#alina-fab:hover{transform:scale(1.07);}
+#alina-fab>svg{width:32px;height:32px;position:relative;z-index:1;}
+#alina-fab::after{content:"";position:absolute;inset:0;border-radius:50%;animation:alinaPulse 2.6s infinite;}
+@keyframes alinaPulse{0%{box-shadow:0 0 0 0 rgba(249,140,30,.5)}70%{box-shadow:0 0 0 16px rgba(249,140,30,0)}100%{box-shadow:0 0 0 0 rgba(249,140,30,0)}}
+#alina-panel{position:fixed;right:22px;bottom:calc(92px + env(safe-area-inset-bottom));width:382px;max-width:calc(100vw - 32px);height:74vh;max-height:620px;background:var(--surface);border:1px solid var(--border);border-radius:18px;box-shadow:var(--sh2);z-index:901;display:flex;flex-direction:column;overflow:hidden;animation:alinaIn .22s var(--ease);}
+[data-theme="dark"] #alina-panel{background:rgba(20,17,28,.92);backdrop-filter:blur(20px) saturate(150%);-webkit-backdrop-filter:blur(20px) saturate(150%);}
+@keyframes alinaIn{from{opacity:0;transform:translateY(14px) scale(.96)}to{opacity:1;transform:none}}
+.alina-hidden{display:none!important;}
+.alina-head{display:flex;align-items:center;gap:11px;padding:13px 15px;border-bottom:1px solid var(--border);background:linear-gradient(135deg,rgba(249,115,22,.12),rgba(251,191,36,.06));flex-shrink:0;}
+.alina-ava{width:38px;height:38px;border-radius:50%;flex-shrink:0;background:linear-gradient(135deg,#F97316,#FBBF24);color:#1a1206;display:flex;align-items:center;justify-content:center;}
+.alina-ava svg{width:22px;height:22px;}
+.alina-ht b{font-size:15px;color:var(--g900);display:block;line-height:1.2;}
+.alina-ht span{font-size:11.5px;color:var(--g600);}
+.alina-x{margin-left:auto;background:none;border:none;cursor:pointer;color:var(--g400);padding:6px;border-radius:8px;line-height:0;}
+.alina-x:hover{background:var(--surface-3);color:var(--g800);}
+.alina-x svg{width:18px;height:18px;}
+#alina-msgs{flex:1 1 auto;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:8px;padding:14px 15px;}
+.alina-b{font-size:13px;line-height:1.55;padding:9px 12px;border-radius:13px;max-width:88%;word-wrap:break-word;}
+.alina-b.u{align-self:flex-end;background:var(--c1);color:var(--c1-on);border-bottom-right-radius:4px;}
+.alina-b.a{align-self:flex-start;background:var(--surface-2);color:var(--g800);border:1px solid var(--border);border-bottom-left-radius:4px;}
+.alina-b.a b{color:var(--g900);}
+.alina-foot{flex-shrink:0;border-top:1px solid var(--border);padding:10px 14px calc(10px + env(safe-area-inset-bottom));background:var(--surface);}
+[data-theme="dark"] .alina-foot{background:transparent;}
+.alina-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:9px;}
+.alina-chips button{border:1px solid var(--border-2);background:var(--surface);color:var(--g600);border-radius:50px;padding:6px 11px;font-size:12px;font-family:inherit;cursor:pointer;transition:.15s;}
+.alina-chips button:hover{border-color:var(--c1);color:var(--c1d);}
+.alina-inrow{display:flex;gap:8px;align-items:center;}
+.alina-cam{width:42px;height:42px;flex-shrink:0;border:1px solid var(--border-2);border-radius:50%;background:var(--surface);color:var(--g600);cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.alina-cam:hover{border-color:var(--c1);color:var(--c1d);}
+.alina-cam svg{width:19px;height:19px;}
+#alina-q{flex:1;min-width:0;border:1px solid var(--border-2);border-radius:50px;padding:10px 14px;font-family:inherit;font-size:14px;background:var(--surface);color:var(--g800);outline:none;}
+#alina-q:focus{border-color:var(--c1);box-shadow:var(--ring);}
+.alina-snd{width:42px;height:42px;flex-shrink:0;border:none;border-radius:50%;background:linear-gradient(135deg,#F97316,#FBBF24);color:#1a1206;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.alina-snd svg{width:18px;height:18px;}
+.alina-item{border:1px solid var(--border);border-radius:12px;padding:11px;margin-top:9px;background:var(--surface);}
+.alina-item textarea{width:100%;border:1px solid var(--border-2);border-radius:8px;padding:7px 9px;font-family:inherit;font-size:13px;background:var(--surface);color:var(--g800);resize:vertical;min-height:42px;outline:none;}
+.alina-item .row{display:flex;gap:6px;margin-top:6px;}
+.alina-item .row input{flex:1;min-width:0;border:1px solid var(--border-2);border-radius:8px;padding:6px 8px;font-family:inherit;font-size:12.5px;background:var(--surface);color:var(--g800);outline:none;}
+.alina-go{width:100%;border:none;border-radius:12px;padding:11px;font-family:inherit;font-weight:700;font-size:14px;cursor:pointer;background:linear-gradient(90deg,#F97316,#FBBF24);color:#1a1206;transition:.2s var(--ease);}
+.alina-go:hover{filter:brightness(1.05);}
+.alina-go:disabled{opacity:.7;cursor:default;filter:none;background:var(--ok);color:#fff;}
+@media(max-width:860px){
+  #alina-fab{left:50%;right:auto;transform:translateX(-50%);bottom:calc(78px + env(safe-area-inset-bottom));width:66px;height:66px;box-shadow:0 8px 26px rgba(249,140,30,.5);}
+  #alina-fab:hover{transform:translateX(-50%) scale(1.05);}
+  #alina-fab>svg{width:35px;height:35px;}
+  #alina-panel{inset:0;left:0;right:0;top:0;bottom:0;width:auto;max-width:none;height:100dvh;max-height:none;border:none;border-radius:0;}
+}
+</style>
+<div id="alina-fab" onclick="alinaToggle()" title="Алина — ИИ-помощник"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13.5" r="6"/><path d="M9.7 13h.01M14.3 13h.01"/><path d="M9.8 15.8a3 3 0 0 0 4.4 0"/><path d="M12 7.5V6"/><path d="M12 6 9.7 4.6v2.8z" fill="currentColor" stroke-width="1"/><path d="M12 6 14.3 4.6v2.8z" fill="currentColor" stroke-width="1"/></svg></div>
+<div id="alina-panel" class="alina-hidden" aria-label="ИИ-помощник Алина">
+  <div class="alina-head">
+    <div class="alina-ava"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13.5" r="6"/><path d="M9.7 13h.01M14.3 13h.01"/><path d="M9.8 15.8a3 3 0 0 0 4.4 0"/><path d="M12 7.5V6"/><path d="M12 6 9.7 4.6v2.8z" fill="currentColor" stroke-width="1"/><path d="M12 6 14.3 4.6v2.8z" fill="currentColor" stroke-width="1"/></svg></div>
+    <div class="alina-ht"><b>Алина</b><span>ИИ-помощник по поручениям</span></div>
+    <button class="alina-x" onclick="alinaToggle()" aria-label="Закрыть"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+  </div>
+  <div id="alina-msgs"></div>
+  <div class="alina-foot">
+    <div class="alina-chips" id="alina-chips">
+      <button onclick="alinaSend('Сводка по филиалам: сколько всего, на исполнении, просрочено, исполнено, и процент выполнения')">Сводка по филиалам</button>
+      <button onclick="alinaSend('Список просроченных поручений, сгруппируй по ответственным')">Просроченные</button>
+      <button onclick="alinaSend('У кого самая большая нагрузка по незакрытым поручениям')">Загрузка</button>
+    </div>
+    <div class="alina-inrow">
+      <button class="alina-cam" onclick="alinaPhoto()" aria-label="Фото протокола"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></button>
+      <input id="alina-q" placeholder="Спросите или вставьте текст…" onkeydown="if(event.key==='Enter')alinaSend()">
+      <button class="alina-snd" onclick="alinaSend()" aria-label="Отправить"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg></button>
+    </div>
+    <input type="file" id="alina-file" accept="image/*" style="display:none" onchange="alinaFile(event)">
+  </div>
+</div>
+<script>
+function alinaToggle(){
+  var p=document.getElementById("alina-panel"); p.classList.toggle("alina-hidden");
+  if(!p.classList.contains("alina-hidden")){
+    var box=document.getElementById("alina-msgs");
+    if(box && !box.getAttribute("data-greeted")){ box.setAttribute("data-greeted","1");
+      var h=new Date().getHours(); var hi=h<6?"Доброй ночи":h<12?"Доброе утро":h<18?"Добрый день":"Добрый вечер";
+      alinaPush("a", hi+"! Меня зовут Алина. Задайте вопрос по поручениям (сводки, отчёты по людям и периодам) или пришлите текст либо фото протокола — я сама пойму, что нужно: ответить или внести поручения.");
+    }
+    setTimeout(function(){ var q=document.getElementById("alina-q"); if(q) q.focus(); }, 60);
+  }
+}
+function alinaEp(){ var DEF="https://poruchenia-ai.3avolokin.workers.dev"; try{ return localStorage.getItem("ai_endpoint")||DEF; }catch(e){ return DEF; } }
+function alinaEsc(s){ return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+function alinaMd(s){ s=String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); s=s.replace(/\*\*([^*]+)\*\*/g,"<b>$1</b>"); s=s.replace(/\n/g,"<br>"); return s; }
+function alinaBranch(){ try{ return (BRANCHES[currentBranch]&&BRANCHES[currentBranch].name)||"текущий"; }catch(e){ return "текущий"; } }
+function alinaScroll(){ var b=document.getElementById("alina-msgs"); if(b) b.scrollTop=b.scrollHeight; }
+function alinaPush(role,html){ var box=document.getElementById("alina-msgs"); var d=document.createElement("div"); d.className="alina-b "+role; d.innerHTML=html; box.appendChild(d); alinaScroll(); return d; }
+function alinaGather(){
+  var out=[];
+  try{
+    var srcs=(typeof getAllTaskSources==="function")?getAllTaskSources():[];
+    if(!srcs.length && typeof skKey==="function") srcs=[{key:skKey(),name:alinaBranch()}];
+    srcs.forEach(function(s){
+      var arr=[]; try{ arr=JSON.parse(localStorage.getItem(s.key)||"[]"); }catch(e){}
+      arr.forEach(function(t){
+        out.push({ branch:s.name, task:String(t.task||"").slice(0,140), responsible:t.responsible||"",
+          status:(typeof calcStatus==="function")?calcStatus(t):(t.status||""), datePlan:t.datePlan||"", dateFact:t.dateFact||"" });
+      });
+    });
+  }catch(e){}
+  return out.slice(0,600);
+}
+function alinaCardHtml(items){
+  window._alinaItems=items;
+  var h='<div style="font-size:12.5px;margin-bottom:4px;">Нашла поручений: <b>'+items.length+'</b>. Добавить в филиал «<b>'+alinaEsc(alinaBranch())+'</b>»:</div>';
+  for(var k=0;k<items.length;k++){ var t=items[k];
+    h+='<div class="alina-item"><label style="display:flex;align-items:center;gap:7px;font-size:12px;color:var(--g600);margin-bottom:6px;"><input type="checkbox" class="alina-ck" data-i="'+k+'" checked style="accent-color:var(--c1)"> Поручение '+(k+1)+'</label>'
+      +'<textarea id="alina-t-'+k+'">'+alinaEsc(t.task||"")+'</textarea>'
+      +'<div class="row"><input id="alina-r-'+k+'" placeholder="Ответственный" value="'+alinaEsc(t.responsible||"")+'"><input id="alina-d-'+k+'" type="date" value="'+alinaEsc(t.datePlan||"")+'"></div></div>';
+  }
+  h+='<button class="alina-go" id="alina-addbtn" style="margin-top:10px" onclick="alinaAdd()">Добавить отмеченные</button>';
+  return h;
+}
+function alinaCall(message, bub){
+  var tasks=alinaGather();
+  fetch(alinaEp(),{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({mode:"smart",message:message,tasks:tasks})})
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      if(d && d.error){ bub.innerHTML='<span style="color:var(--err)">Ошибка: '+alinaEsc(d.error)+'</span>'; alinaScroll(); return; }
+      if(d && d.type==="extract"){ if(d.items && d.items.length){ bub.innerHTML=alinaCardHtml(d.items); } else { bub.innerHTML="Не нашла поручений в этом тексте."; } }
+      else { bub.innerHTML=alinaMd((d&&d.answer)||"Нет ответа."); }
+      alinaScroll();
+    })
+    .catch(function(e){ bub.innerHTML='<span style="color:var(--err)">Не удалось связаться со мной. Проверьте подключение.</span>'; });
+}
+function alinaSend(q){
+  var inp=document.getElementById("alina-q");
+  var explicit=(typeof q==="string" && q);
+  var msg=explicit ? q : (inp.value||"").trim();
+  if(!msg) return;
+  if(inp && !explicit) inp.value="";
+  alinaPush("u", alinaEsc(msg));
+  var bub=alinaPush("a","…");
+  alinaCall(msg, bub);
+}
+function alinaPhoto(){ var f=document.getElementById("alina-file"); if(f){ f.value=""; f.click(); } }
+function alinaFile(e){
+  var file=e.target.files && e.target.files[0]; if(!file) return;
+  alinaPush("u","📷 Фото протокола");
+  var bub=alinaPush("a","Распознаю фото…");
+  if(typeof Tesseract==="undefined"){ bub.innerHTML='<span style="color:var(--err)">OCR не загрузился. Откройте позже или вставьте текст.</span>'; return; }
+  Tesseract.recognize(file,"rus+eng",{logger:function(m){ if(m.status==="recognizing text"){ bub.textContent="Распознаю фото… "+Math.round(m.progress*100)+"%"; } }})
+    .then(function(res){ var text=(res&&res.data&&res.data.text||"").trim();
+      if(!text){ bub.innerHTML="Не удалось распознать текст на фото."; return; }
+      bub.textContent="Распознала, разбираю поручения…"; alinaCall(text, bub); })
+    .catch(function(){ bub.innerHTML='<span style="color:var(--err)">Не удалось распознать фото.</span>'; });
+}
+function alinaAdd(){
+  if(typeof addTask!=="function") return;
+  var cks=document.querySelectorAll(".alina-ck"), n=0;
+  for(var k=0;k<cks.length;k++){ if(!cks[k].checked) continue; var i=cks[k].getAttribute("data-i");
+    var task=(document.getElementById("alina-t-"+i).value||"").trim(); if(!task) continue;
+    addTask({ task:task, responsible:(document.getElementById("alina-r-"+i).value||"").trim(),
+      datePlan:(document.getElementById("alina-d-"+i).value||""),
+      reporting:(window._alinaItems[i]&&window._alinaItems[i].reporting)||"", source:"letter" });
+    n++;
+  }
+  var btn=document.getElementById("alina-addbtn"); if(btn){ btn.disabled=true; btn.textContent="Добавлено: "+n; }
+  alinaPush("a","Готово — добавила "+n+" поручений в филиал «"+alinaEsc(alinaBranch())+"». Источник: Письмо/СЗ.");
+  if(typeof ntf==="function") ntf("Алина добавила "+n+" поручений");
+}
+</script>
 </body>
 </html>
