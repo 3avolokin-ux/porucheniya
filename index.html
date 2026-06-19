@@ -766,6 +766,7 @@ select.fc::-ms-expand { display: none; }
 select.fc option { background: var(--surface); color: var(--g800); }
 [data-theme="dark"] select.fc option { background: #1A1E27; color: #E7ECF3; }
 </style>
+<style>.alina-refs{display:flex;flex-direction:column;gap:5px;margin-top:9px;}.alina-ref{display:flex;align-items:center;gap:8px;text-align:left;border:1px solid var(--border-2);background:var(--surface);color:var(--g800);border-radius:9px;padding:7px 10px;font-family:inherit;font-size:12.5px;cursor:pointer;width:100%;transition:.15s;}.alina-ref:hover{border-color:var(--c1);color:var(--c1d);}.alina-ref-d{width:7px;height:7px;border-radius:50%;background:var(--c1);flex-shrink:0;}@keyframes alinaFlash{0%,100%{background:var(--c1l)}50%{background:var(--c1ll)}}tr.alina-hl td{animation:alinaFlash 1s ease 2;}</style>
 </head>
 <body>
 <script>(function(){try{var t=localStorage.getItem("ui_theme")||"dark";document.documentElement.setAttribute("data-theme",t);}catch(e){}})();</script>
@@ -1836,7 +1837,7 @@ function renderTable() {
     const ov = st === 'Просрочено';
     const respName = t.responsible && t.responsible.trim() ? t.responsible.trim() : 'Не указан';
     const respSel  = filterResp === respName;
-    return `<tr class="${ov ? 'ov' : ''}">
+    return `<tr data-id="${t.id}" class="${ov ? 'ov' : ''}">
       <td style="color:var(--g400); font-size:12px; font-weight:600;">${i+1}</td>
       <td style="font-size:12px; color:var(--g600); white-space:nowrap;">${fmtD(t.dateAssigned)}</td>
       <td class="task-cell">
@@ -3246,6 +3247,8 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 
 <script src="https://unpkg.com/tesseract.js@4.1.1/dist/tesseract.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
 
 <style>
 /* ─── SMS / TELEGRAM MODULE ─── */
@@ -3632,11 +3635,11 @@ void main(void) {
       <button onclick="alinaSend('У кого самая большая нагрузка по незакрытым поручениям')">Загрузка</button>
     </div>
     <div class="alina-inrow">
-      <button class="alina-cam" onclick="alinaPhoto()" aria-label="Фото протокола"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></button>
+      <button class="alina-cam" onclick="alinaPhoto()" aria-label="Файл протокола: фото, PDF, Word, Excel" title="Файл протокола: фото, PDF, Word, Excel"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></button>
       <input id="alina-q" placeholder="Спросите или вставьте текст…" onkeydown="if(event.key==='Enter')alinaSend()">
       <button class="alina-snd" onclick="alinaSend()" aria-label="Отправить"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg></button>
     </div>
-    <input type="file" id="alina-file" accept="image/*" style="display:none" onchange="alinaFile(event)">
+    <input type="file" id="alina-file" accept="image/*,application/pdf,.xlsx,.xls,.docx" style="display:none" onchange="alinaFile(event)">
   </div>
 </div>
 <script>
@@ -3658,19 +3661,45 @@ function alinaBranch(){ try{ return (BRANCHES[currentBranch]&&BRANCHES[currentBr
 function alinaScroll(){ var b=document.getElementById("alina-msgs"); if(b) b.scrollTop=b.scrollHeight; }
 function alinaPush(role,html){ var box=document.getElementById("alina-msgs"); var d=document.createElement("div"); d.className="alina-b "+role; d.innerHTML=html; box.appendChild(d); alinaScroll(); return d; }
 function alinaGather(){
-  var out=[];
+  var out=[]; window._alinaRefMap={};
   try{
     var srcs=(typeof getAllTaskSources==="function")?getAllTaskSources():[];
     if(!srcs.length && typeof skKey==="function") srcs=[{key:skKey(),name:alinaBranch()}];
     srcs.forEach(function(s){
       var arr=[]; try{ arr=JSON.parse(localStorage.getItem(s.key)||"[]"); }catch(e){}
       arr.forEach(function(t){
-        out.push({ branch:s.name, task:String(t.task||"").slice(0,140), responsible:t.responsible||"",
+        var ref=s.key+"#"+t.id;
+        window._alinaRefMap[ref]={key:s.key,id:t.id,task:String(t.task||"").slice(0,90),branch:s.name};
+        out.push({ ref:ref, branch:s.name, task:String(t.task||"").slice(0,140), responsible:t.responsible||"",
           status:(typeof calcStatus==="function")?calcStatus(t):(t.status||""), datePlan:t.datePlan||"", dateFact:t.dateFact||"" });
       });
     });
   }catch(e){}
   return out.slice(0,600);
+}
+function alinaRefsHtml(refs){
+  var map=window._alinaRefMap||{}, h='', seen={};
+  for(var i=0;i<refs.length;i++){ var r=refs[i]; if(seen[r]) continue; seen[r]=1; var m=map[r]; if(!m) continue;
+    h+='<button class="alina-ref" onclick="alinaGoto(\''+r+'\')"><span class="alina-ref-d"></span>'+alinaEsc(m.task)+'</button>';
+  }
+  return h ? ('<div class="alina-refs">'+h+'</div>') : '';
+}
+function alinaGoto(ref){
+  var m=(window._alinaRefMap||{})[ref]; if(!m) return;
+  var key=m.key, id=m.id;
+  try{
+    if(key==="tasks_nvt"){ if(currentBranch!=="nvt"&&typeof switchBranch==="function") switchBranch("nvt"); }
+    else if(key==="tasks_nyg"){ if(currentBranch!=="nyg"&&typeof switchBranch==="function") switchBranch("nyg"); }
+    else { var pid=key.replace("tasks_",""); if(typeof switchToProject==="function") switchToProject(pid); }
+  }catch(e){}
+  try{ if(typeof goTab==="function") goTab("tasks"); }catch(e){}
+  try{ document.querySelectorAll('#stFDrop input[type=checkbox]').forEach(function(b){ b.checked=false; }); if(typeof onStChange==="function") onStChange(); }catch(e){}
+  try{ var sr=document.getElementById('srch'); if(sr) sr.value=''; var mn=document.getElementById('mnF'); if(mn) mn.value=''; if(typeof renderAll==="function") renderAll(); }catch(e){}
+  try{ if(window.innerWidth<=860){ document.getElementById('alina-panel').classList.add('alina-hidden'); } }catch(e){}
+  setTimeout(function(){
+    var row=document.querySelector('#tbody tr[data-id="'+id+'"]');
+    if(row){ row.scrollIntoView({behavior:"smooth",block:"center"}); row.classList.add("alina-hl"); setTimeout(function(){ row.classList.remove("alina-hl"); }, 2600); }
+  }, 280);
 }
 function alinaCardHtml(items){
   window._alinaItems=items;
@@ -3690,7 +3719,7 @@ function alinaCall(message, bub){
     .then(function(d){
       if(d && d.error){ bub.innerHTML='<span style="color:var(--err)">Ошибка: '+alinaEsc(d.error)+'</span>'; alinaScroll(); return; }
       if(d && d.type==="extract"){ if(d.items && d.items.length){ bub.innerHTML=alinaCardHtml(d.items); } else { bub.innerHTML="Не нашла поручений в этом тексте."; } }
-      else { bub.innerHTML=alinaMd((d&&d.answer)||"Нет ответа."); }
+      else { var _h=alinaMd((d&&d.answer)||"Нет ответа."); var _r=(d&&d.refs)||[]; if(_r.length) _h+=alinaRefsHtml(_r); bub.innerHTML=_h; }
       alinaScroll();
     })
     .catch(function(e){ bub.innerHTML='<span style="color:var(--err)">Не удалось связаться со мной. Проверьте подключение.</span>'; });
@@ -3708,14 +3737,74 @@ function alinaSend(q){
 function alinaPhoto(){ var f=document.getElementById("alina-file"); if(f){ f.value=""; f.click(); } }
 function alinaFile(e){
   var file=e.target.files && e.target.files[0]; if(!file) return;
-  alinaPush("u","📷 Фото протокола");
-  var bub=alinaPush("a","Распознаю фото…");
-  if(typeof Tesseract==="undefined"){ bub.innerHTML='<span style="color:var(--err)">OCR не загрузился. Откройте позже или вставьте текст.</span>'; return; }
+  var nm=(file.name||"").toLowerCase(), ty=(file.type||"");
+  var isPdf=/\.pdf$/.test(nm)||/pdf/i.test(ty);
+  var isXls=/\.xlsx?$/.test(nm)||/sheet|excel/i.test(ty);
+  var isDocx=/\.docx$/.test(nm)||/wordprocessingml/i.test(ty);
+  var isDoc=/\.doc$/.test(nm) && !isDocx;
+  var label=isPdf?"📄 PDF":isXls?"📊 Excel":(isDocx||isDoc)?"📝 Word":"📷 Фото";
+  alinaPush("u", label+" протокола");
+  var bub=alinaPush("a","Читаю файл…");
+  if(isDoc){ bub.innerHTML="Старый формат .doc не читается — сохраните как .docx или PDF, либо пришлите фото."; return; }
+  if(isPdf) alinaPdf(file,bub);
+  else if(isXls) alinaXlsx(file,bub);
+  else if(isDocx) alinaDocx(file,bub);
+  else alinaImg(file,bub);
+}
+function alinaXlsx(file,bub){
+  if(typeof XLSX==="undefined"){ bub.innerHTML='<span style="color:var(--err)">Модуль Excel не загрузился. Обновите страницу.</span>'; return; }
+  file.arrayBuffer().then(function(buf){
+    var wb=XLSX.read(buf,{type:"array"}); var txt="";
+    wb.SheetNames.forEach(function(sn){ txt+="Лист: "+sn+"\n"+XLSX.utils.sheet_to_csv(wb.Sheets[sn])+"\n\n"; });
+    txt=txt.trim();
+    if(!txt){ bub.innerHTML="Файл пустой."; return; }
+    bub.textContent="Прочитала Excel, разбираю…"; alinaCall(txt.slice(0,14000),bub);
+  }).catch(function(){ bub.innerHTML='<span style="color:var(--err)">Не удалось прочитать Excel.</span>'; });
+}
+function alinaDocx(file,bub){
+  if(typeof mammoth==="undefined"){ bub.innerHTML='<span style="color:var(--err)">Модуль Word не загрузился. Обновите страницу.</span>'; return; }
+  file.arrayBuffer().then(function(buf){ return mammoth.extractRawText({arrayBuffer:buf}); })
+    .then(function(res){ var t=(res&&res.value||"").trim();
+      if(!t){ bub.innerHTML="В документе нет текста."; return; }
+      bub.textContent="Прочитала Word, разбираю…"; alinaCall(t.slice(0,14000),bub); })
+    .catch(function(){ bub.innerHTML='<span style="color:var(--err)">Не удалось прочитать Word.</span>'; });
+}
+function alinaImg(file,bub){
+  if(typeof Tesseract==="undefined"){ bub.innerHTML='<span style="color:var(--err)">OCR не загрузился. Обновите страницу.</span>'; return; }
   Tesseract.recognize(file,"rus+eng",{logger:function(m){ if(m.status==="recognizing text"){ bub.textContent="Распознаю фото… "+Math.round(m.progress*100)+"%"; } }})
     .then(function(res){ var text=(res&&res.data&&res.data.text||"").trim();
       if(!text){ bub.innerHTML="Не удалось распознать текст на фото."; return; }
-      bub.textContent="Распознала, разбираю поручения…"; alinaCall(text, bub); })
+      bub.textContent="Распознала, разбираю поручения…"; alinaCall(text,bub); })
     .catch(function(){ bub.innerHTML='<span style="color:var(--err)">Не удалось распознать фото.</span>'; });
+}
+function alinaPdf(file,bub){
+  if(typeof pdfjsLib==="undefined"){ bub.innerHTML='<span style="color:var(--err)">Модуль PDF не загрузился. Обновите страницу.</span>'; return; }
+  try{ if(pdfjsLib.GlobalWorkerOptions && !pdfjsLib.GlobalWorkerOptions.workerSrc) pdfjsLib.GlobalWorkerOptions.workerSrc="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js"; }catch(e){}
+  file.arrayBuffer().then(function(buf){
+    return pdfjsLib.getDocument({data:buf}).promise;
+  }).then(function(pdf){
+    var np=pdf.numPages;
+    var getText=pdf.getPage(1).then(function(){ return; });
+    // collect text layer
+    var chain=Promise.resolve(""); 
+    for(var n=1;n<=np;n++){ (function(n){ chain=chain.then(function(acc){ return pdf.getPage(n).then(function(pg){ return pg.getTextContent(); }).then(function(tc){ return acc+" "+tc.items.map(function(x){return x.str;}).join(" "); }); }); })(n); }
+    return chain.then(function(txt){
+      txt=(txt||"").trim();
+      if(txt.replace(/\s/g,"").length>40){ bub.textContent="Прочитала PDF, разбираю…"; alinaCall(txt,bub); return; }
+      // scanned PDF -> OCR each page
+      if(typeof Tesseract==="undefined"){ bub.innerHTML='<span style="color:var(--err)">PDF — скан, а OCR не загрузился. Обновите страницу.</span>'; return; }
+      var ocr="", oc=Promise.resolve();
+      for(var p=1;p<=np;p++){ (function(p){ oc=oc.then(function(){
+        bub.textContent="Распознаю PDF, стр. "+p+"/"+np+"…";
+        return pdf.getPage(p).then(function(page){
+          var vp=page.getViewport({scale:2});
+          var cv=document.createElement("canvas"); cv.width=vp.width; cv.height=vp.height;
+          return page.render({canvasContext:cv.getContext("2d"),viewport:vp}).promise.then(function(){ return Tesseract.recognize(cv,"rus+eng"); }).then(function(r){ ocr+=(r&&r.data&&r.data.text||"")+"\n"; });
+        });
+      }); })(p); }
+      return oc.then(function(){ ocr=ocr.trim(); if(!ocr){ bub.innerHTML="Не удалось распознать текст в PDF."; return; } bub.textContent="Распознала PDF, разбираю…"; alinaCall(ocr,bub); });
+    });
+  }).catch(function(){ bub.innerHTML='<span style="color:var(--err)">Не удалось прочитать PDF.</span>'; });
 }
 function alinaAdd(){
   if(typeof addTask!=="function") return;
