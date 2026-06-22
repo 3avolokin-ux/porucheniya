@@ -798,6 +798,32 @@ select.fc option { background: var(--surface); color: var(--g800); }
   .alina-ref-d{width:8px;height:8px;}
 }
 </style>
+<style>
+/* ── МОБИЛЬНОЕ: крестик Алины из-под чёлки + крупнее ── */
+@media(max-width:860px){
+  #alina-panel .alina-head{ padding-top: calc(14px + env(safe-area-inset-top)); }
+  #alina-fab{ bottom: calc(80px + env(safe-area-inset-bottom)); }
+  .alina-x{ padding:12px; }
+  .alina-x svg{ width:26px; height:26px; }
+  .alina-head .alina-ht b{ font-size:19px; }
+  .alina-b{ font-size:17px; line-height:1.6; }
+}
+/* ── МОБИЛЬНОЕ: крупнее текст приложения ── */
+@media(max-width:760px){
+  body{ font-size:16px; }
+  table{ font-size:15px; }
+  thead th{ font-size:12px; padding:11px 9px; }
+  td{ padding:15px 10px; }
+  .task-text{ font-size:15.5px; line-height:1.5; }
+  td[style*="font-size:12px"]{ font-size:14px !important; }
+  .badge{ font-size:13.5px; padding:8px 13px; }
+  .kpi-val{ font-size:27px; }
+  .kpi-label{ font-size:13.5px; }
+  .fi{ font-size:15px; }
+  .btn{ font-size:14.5px; }
+  .abt svg{ width:20px; height:20px; }
+}
+</style>
 </head>
 <body>
 <script>(function(){try{var t=localStorage.getItem("ui_theme")||"dark";document.documentElement.setAttribute("data-theme",t);}catch(e){}})();</script>
