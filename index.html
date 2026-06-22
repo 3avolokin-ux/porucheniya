@@ -603,10 +603,10 @@ tbody tr:nth-child(14){animation-delay:0.39s}
 /* ════ FX LAYER — animated background + ember entrance ════ */
 html { background: var(--bg); }
 body { background: transparent !important; }
-#bgFx { position: fixed; inset: 0; width: 100vw; height: 100vh; z-index: -1; pointer-events: none; display: block; }
+#bgFx { position: fixed; inset: 0; width: 100vw; height: 100vh; height: 100dvh; z-index: -1; pointer-events: none; display: block; }
 .app-main, .page, .tc { background: transparent; }
 #auth-overlay { overflow: hidden; }
-#authFx { position: fixed; inset: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none; }
+#authFx { position: fixed; inset: 0; width: 100vw; height: 100vh; height: 100dvh; z-index: 0; pointer-events: none; }
 .auth-box { position: relative; z-index: 2; animation: authPop .7s cubic-bezier(.2,.8,.2,1) both; }
 @keyframes authPop { 0% { opacity: 0; transform: translateY(18px) scale(.94); } 100% { opacity: 1; transform: none; } }
 .app-main { animation: appIn .5s var(--ease) both; }
@@ -771,30 +771,30 @@ select.fc option { background: var(--surface); color: var(--g800); }
 /* ── Алина: крупнее на мобильном ── */
 @media(max-width:860px){
   #alina-msgs{padding:16px;gap:10px;}
-  .alina-b{font-size:15px;line-height:1.6;padding:11px 14px;max-width:90%;border-radius:15px;}
+  .alina-b{font-size:16.5px;line-height:1.65;padding:12px 15px;max-width:90%;border-radius:16px;}
   .alina-b.a b{font-weight:700;}
   .alina-head{padding:15px 16px;}
   .alina-ava{width:44px;height:44px;}
   .alina-ava svg{width:25px;height:25px;}
-  .alina-ht b{font-size:17px;}
+  .alina-ht b{font-size:18px;}
   .alina-ht span{font-size:13px;}
   .alina-x{padding:9px;}
   .alina-x svg{width:22px;height:22px;}
   .alina-foot{padding:12px 14px calc(12px + env(safe-area-inset-bottom));}
   .alina-chips{gap:8px;margin-bottom:11px;}
-  .alina-chips button{font-size:13.5px;padding:9px 14px;border-radius:50px;}
+  .alina-chips button{font-size:14.5px;padding:11px 16px;border-radius:50px;}
   .alina-inrow{gap:10px;}
-  #alina-q{font-size:16px;padding:13px 16px;}
-  .alina-cam,.alina-snd{width:48px;height:48px;}
+  #alina-q{font-size:16.5px;padding:15px 17px;}
+  .alina-cam,.alina-snd{width:52px;height:52px;}
   .alina-cam svg,.alina-snd svg{width:22px;height:22px;}
   .alina-item{padding:13px;border-radius:13px;}
   .alina-item textarea{font-size:16px;min-height:56px;padding:9px 11px;}
   .alina-item .row{gap:8px;flex-wrap:wrap;}
   .alina-item .row input{font-size:16px;padding:10px 11px;flex-basis:100%;}
   .alina-item label{font-size:13px!important;}
-  .alina-go{font-size:16px;padding:14px;border-radius:13px;}
+  .alina-go{font-size:17px;padding:15px;border-radius:13px;}
   .alina-refs{gap:7px;}
-  .alina-ref{font-size:14px;padding:11px 13px;border-radius:11px;}
+  .alina-ref{font-size:15px;padding:12px 14px;border-radius:11px;}
   .alina-ref-d{width:8px;height:8px;}
 }
 </style>
@@ -3578,10 +3578,13 @@ void main(void) {
     var uRes=gl.getUniformLocation(p,"resolution"), uTime=gl.getUniformLocation(p,"time");
     var scale = isAuth ? 0.85 : 0.65; if(soft) scale = 0.4;
     var W=1,H=1, t0=null, last=0, raf=0, MINF=1000/32, fcount=0, sum=0, lastT=6.0, perfStop=false;
-    function resize(){ var d=BASE_DPR*scale; W=Math.max(1,Math.floor(innerWidth*d)); H=Math.max(1,Math.floor(innerHeight*d)); cv.width=W; cv.height=H; cv.style.width=innerWidth+"px"; cv.style.height=innerHeight+"px"; gl.viewport(0,0,W,H); }
+    function resize(){ var w=cv.clientWidth||innerWidth, h=cv.clientHeight||innerHeight; var d=BASE_DPR*scale; W=Math.max(1,Math.floor(w*d)); H=Math.max(1,Math.floor(h*d)); cv.width=W; cv.height=H; gl.viewport(0,0,W,H); }
     function draw(t){ gl.uniform2f(uRes,W,H); gl.uniform1f(uTime,t); gl.drawArrays(gl.TRIANGLE_STRIP,0,4); }
+    function onResize(){ resize(); draw(lastT); }
     resize();
-    addEventListener("resize", function(){ resize(); draw(lastT); }, {passive:true});
+    addEventListener("resize", onResize, {passive:true});
+    addEventListener("orientationchange", function(){ setTimeout(onResize,300); }, {passive:true});
+    try{ if(window.visualViewport) window.visualViewport.addEventListener("resize", onResize, {passive:true}); }catch(e){}
     if(RM){ draw(6.0); return; }
     function frame(ts){
       if(isAuth && ov && ov.classList.contains("hidden")){ raf=0; return; }
