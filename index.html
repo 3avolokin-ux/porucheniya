@@ -3257,15 +3257,25 @@ document.addEventListener('DOMContentLoaded', () => {
   initTgFBSync();
   // Seed default Telegram settings if empty — save to localStorage + Firebase
   if (!loadTgSettings().token) {
-    const defaultTg = {
-      token: '8554716576:AAEhT7cbb0zPvNNyfiTNhAomBgAGhjZ7SGI',
-      chatId: '-1003794050040',
-      evtNew: true, evtWarn: true, evtOver: true, evtStatus: true, evtDaily: true,
-      warnDays: 3
-    };
-    localStorage.setItem(TG_SETTINGS_KEY, JSON.stringify(defaultTg));
-    db.ref('tg_settings').set(defaultTg).catch(() => {});
-    restoreTgSettings();
+    // SAFE: read existing Firebase settings first, do NOT overwrite them.
+    db.ref('tg_settings').once('value', function(snap){
+      var fb = snap.val();
+      if (fb && fb.token) {
+        localStorage.setItem(TG_SETTINGS_KEY, JSON.stringify(fb));
+        restoreTgSettings();
+      } else {
+        // first time anywhere -> seed with ALL events OFF (no accidental spam)
+        var defaultTg = {
+          token: '8554716576:AAEhT7cbb0zPvNNyfiTNhAomBgAGhjZ7SGI',
+          chatId: '-1003794050040',
+          evtNew: false, evtWarn: false, evtOver: false, evtStatus: false, evtDaily: false,
+          warnDays: 3
+        };
+        localStorage.setItem(TG_SETTINGS_KEY, JSON.stringify(defaultTg));
+        db.ref('tg_settings').set(defaultTg).catch(function(){});
+        restoreTgSettings();
+      }
+    });
   }
   autoCheckDeadlinesTg();
   // SMS module init
