@@ -767,6 +767,37 @@ select.fc option { background: var(--surface); color: var(--g800); }
 [data-theme="dark"] select.fc option { background: #1A1E27; color: #E7ECF3; }
 </style>
 <style>.alina-refs{display:flex;flex-direction:column;gap:5px;margin-top:9px;}.alina-ref{display:flex;align-items:center;gap:8px;text-align:left;border:1px solid var(--border-2);background:var(--surface);color:var(--g800);border-radius:9px;padding:7px 10px;font-family:inherit;font-size:12.5px;cursor:pointer;width:100%;transition:.15s;}.alina-ref:hover{border-color:var(--c1);color:var(--c1d);}.alina-ref-d{width:7px;height:7px;border-radius:50%;background:var(--c1);flex-shrink:0;}@keyframes alinaFlash{0%,100%{background:var(--c1l)}50%{background:var(--c1ll)}}tr.alina-hl td{animation:alinaFlash 1s ease 2;}</style>
+<style>
+/* ── Алина: крупнее на мобильном ── */
+@media(max-width:860px){
+  #alina-msgs{padding:16px;gap:10px;}
+  .alina-b{font-size:15px;line-height:1.6;padding:11px 14px;max-width:90%;border-radius:15px;}
+  .alina-b.a b{font-weight:700;}
+  .alina-head{padding:15px 16px;}
+  .alina-ava{width:44px;height:44px;}
+  .alina-ava svg{width:25px;height:25px;}
+  .alina-ht b{font-size:17px;}
+  .alina-ht span{font-size:13px;}
+  .alina-x{padding:9px;}
+  .alina-x svg{width:22px;height:22px;}
+  .alina-foot{padding:12px 14px calc(12px + env(safe-area-inset-bottom));}
+  .alina-chips{gap:8px;margin-bottom:11px;}
+  .alina-chips button{font-size:13.5px;padding:9px 14px;border-radius:50px;}
+  .alina-inrow{gap:10px;}
+  #alina-q{font-size:16px;padding:13px 16px;}
+  .alina-cam,.alina-snd{width:48px;height:48px;}
+  .alina-cam svg,.alina-snd svg{width:22px;height:22px;}
+  .alina-item{padding:13px;border-radius:13px;}
+  .alina-item textarea{font-size:16px;min-height:56px;padding:9px 11px;}
+  .alina-item .row{gap:8px;flex-wrap:wrap;}
+  .alina-item .row input{font-size:16px;padding:10px 11px;flex-basis:100%;}
+  .alina-item label{font-size:13px!important;}
+  .alina-go{font-size:16px;padding:14px;border-radius:13px;}
+  .alina-refs{gap:7px;}
+  .alina-ref{font-size:14px;padding:11px 13px;border-radius:11px;}
+  .alina-ref-d{width:8px;height:8px;}
+}
+</style>
 </head>
 <body>
 <script>(function(){try{var t=localStorage.getItem("ui_theme")||"dark";document.documentElement.setAttribute("data-theme",t);}catch(e){}})();</script>
