@@ -3786,7 +3786,7 @@ function alinaCardHtml(items){
 function alinaCall(message, bub){
   var tasks=alinaGather();
   if(!window._alinaHist) window._alinaHist=[];
-  fetch(alinaEp(),{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({mode:"chat",message:message,tasks:tasks,history:window._alinaHist})})
+  fetch(alinaEp(),{method:"POST",headers:{"Content-Type":"text/plain;charset=UTF-8"},body:JSON.stringify({mode:"chat",message:message,tasks:tasks,history:window._alinaHist})})
     .then(function(r){ return r.json(); })
     .then(function(d){
       if(d && d.error){ bub.innerHTML='<span style="color:var(--err)">Ошибка: '+alinaEsc(d.error)+'</span>'; alinaScroll(); return; }
