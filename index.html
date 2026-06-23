@@ -3749,15 +3749,16 @@ function alinaGather(){
   return out.slice(0,600);
 }
 function alinaRefsHtml(refs){
-  var map=window._alinaRefMap||{}, h='', seen={};
-  for(var i=0;i<refs.length;i++){ var r=refs[i]; if(seen[r]) continue; seen[r]=1; var m=map[r]; if(!m) continue;
-    h+='<button class="alina-ref" onclick="alinaGoto(\''+r+'\')"><span class="alina-ref-d"></span>'+alinaEsc(m.task)+'</button>';
+  var h='', seen={};
+  for(var i=0;i<refs.length;i++){ var r=refs[i]; var ref=(typeof r==="string")?r:(r&&r.ref); if(!ref||seen[ref]) continue; seen[ref]=1;
+    var task=(typeof r==="string")?ref:((r&&r.task)||ref);
+    h+='<button class="alina-ref" onclick="alinaGoto(\''+ref+'\')"><span class="alina-ref-d"></span>'+alinaEsc(task)+'</button>';
   }
   return h ? ('<div class="alina-refs">'+h+'</div>') : '';
 }
 function alinaGoto(ref){
-  var m=(window._alinaRefMap||{})[ref]; if(!m) return;
-  var key=m.key, id=m.id;
+  var parts=String(ref).split("#"); var key=parts[0], id=parseInt(parts[1],10);
+  if(!key||isNaN(id)) return;
   try{
     if(key==="tasks_nvt"){ if(currentBranch!=="nvt"&&typeof switchBranch==="function") switchBranch("nvt"); }
     else if(key==="tasks_nyg"){ if(currentBranch!=="nyg"&&typeof switchBranch==="function") switchBranch("nyg"); }
@@ -3784,9 +3785,8 @@ function alinaCardHtml(items){
   return h;
 }
 function alinaCall(message, bub){
-  var tasks=alinaGather();
   if(!window._alinaHist) window._alinaHist=[];
-  fetch(alinaEp(),{method:"POST",headers:{"Content-Type":"text/plain;charset=UTF-8"},body:JSON.stringify({mode:"chat",message:message,tasks:tasks,history:window._alinaHist})})
+  fetch(alinaEp(),{method:"POST",headers:{"Content-Type":"text/plain;charset=UTF-8"},body:JSON.stringify({mode:"chat",message:message,history:window._alinaHist})})
     .then(function(r){ return r.json(); })
     .then(function(d){
       if(d && d.error){ bub.innerHTML='<span style="color:var(--err)">Ошибка: '+alinaEsc(d.error)+'</span>'; alinaScroll(); return; }
