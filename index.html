@@ -825,6 +825,7 @@ select.fc option { background: var(--surface); color: var(--g800); }
 }
 </style>
 <style>@media(max-width:760px){ input,select,textarea,.fi,.fc{ font-size:16px !important; } }</style>
+<style>.alina-warn{border-color:var(--err)!important;background:var(--errl)!important;}.alina-miss{font-size:11.5px;color:var(--err);margin-top:6px;line-height:1.45;}</style>
 </head>
 <body>
 <script>(function(){try{var t=localStorage.getItem("ui_theme")||"dark";document.documentElement.setAttribute("data-theme",t);}catch(e){}})();</script>
@@ -1089,7 +1090,7 @@ document.addEventListener('DOMContentLoaded', () => {
           </div>
           <div class="fld">
             <label>Ответственный</label>
-            <input class="fc" id="f-resp" placeholder="Фамилия И.О.">
+            <input class="fc" id="f-resp" placeholder="Фамилия И.О." list="execList" onfocus="refreshExecList()">
           </div>
           <div class="fld">
             <label>Руководитель</label>
@@ -1480,7 +1481,7 @@ document.addEventListener('DOMContentLoaded', () => {
         <label>Текст поручения</label>
         <textarea class="fc" id="e-task" style="min-height:80px;"></textarea>
       </div>
-      <div class="fld"><label>Ответственный</label><input class="fc" id="e-resp"></div>
+      <div class="fld"><label>Ответственный</label><input class="fc" id="e-resp" list="execList" onfocus="refreshExecList()"></div>
       <div class="fld"><label>Руководитель</label><input class="fc" id="e-mgr"></div>
       <div class="fld"><label>Дата поручения</label><input class="fc" type="date" id="e-date"></div>
       <div class="fld"><label>Срок (план)</label><input class="fc" type="date" id="e-plan"></div>
@@ -3779,11 +3780,17 @@ function alinaCardHtml(items){
   window._alinaCards=window._alinaCards||{};
   var cid=(window._alinaCardN=(window._alinaCardN||0)+1);
   window._alinaCards[cid]=items;
-  var h='<div style="font-size:12.5px;margin-bottom:4px;">Нашла поручений: <b>'+items.length+'</b>. Добавить в филиал «<b>'+alinaEsc(alinaBranch())+'</b>»:</div>';
-  for(var k=0;k<items.length;k++){ var t=items[k];
+  function rm(t){ return !(t.responsible&&String(t.responsible).trim()); }
+  function dm(t){ return !(t.datePlan&&String(t.datePlan).trim()) && !(t.reporting&&String(t.reporting).trim()); }
+  var miss=0; for(var z=0;z<items.length;z++){ if(rm(items[z])||dm(items[z])) miss++; }
+  var h='<div style="font-size:12.5px;margin-bottom:6px;">Нашла поручений: <b>'+items.length+'</b>. Добавить в «<b>'+alinaEsc(alinaBranch())+'</b>».'
+    +(miss?' <span style="color:var(--err)">У '+miss+' не хватает ответственного или срока — отметила ⚠, впишите вручную.</span>':'')+'</div>';
+  for(var k=0;k<items.length;k++){ var t=items[k]; var rmiss=rm(t), dmiss=dm(t);
     h+='<div class="alina-item"><label style="display:flex;align-items:center;gap:7px;font-size:12px;color:var(--g600);margin-bottom:6px;"><input type="checkbox" class="alina-ck" data-c="'+cid+'" data-i="'+k+'" checked style="accent-color:var(--c1)"> Поручение '+(k+1)+'</label>'
       +'<textarea id="alina-t-'+cid+'-'+k+'">'+alinaEsc(t.task||"")+'</textarea>'
-      +'<div class="row"><input id="alina-r-'+cid+'-'+k+'" placeholder="Ответственный" value="'+alinaEsc(t.responsible||"")+'"><input id="alina-d-'+cid+'-'+k+'" type="date" value="'+alinaEsc(t.datePlan||"")+'"></div></div>';
+      +'<div class="row"><input id="alina-r-'+cid+'-'+k+'" placeholder="'+(rmiss?"⚠ ответственный не найден":"Ответственный")+'" value="'+alinaEsc(t.responsible||"")+'" list="execList" onfocus="refreshExecList()"'+(rmiss?' class="alina-warn"':'')+'><input id="alina-d-'+cid+'-'+k+'" type="date" value="'+alinaEsc(t.datePlan||"")+'"'+(dmiss?' class="alina-warn"':'')+'></div>'
+      +((rmiss||dmiss)?'<div class="alina-miss">⚠ Не определила: '+(rmiss?"ответственного":"")+((rmiss&&dmiss)?" и ":"")+(dmiss?"срок":"")+(t.reporting?' (срок текстовый: «'+alinaEsc(t.reporting)+'»)':"")+' — впишите вручную.</div>':"")
+      +'</div>';
   }
   h+='<button class="alina-go" id="alina-addbtn-'+cid+'" style="margin-top:10px" onclick="alinaAdd('+cid+')">Добавить отмеченные</button>';
   return h;
@@ -3926,6 +3933,21 @@ function alinaAdd(cid){
   var synced=(typeof fbConnected!=="undefined")?fbConnected:true;
   alinaPush("a","Готово — добавила "+n+" поручений в «"+alinaEsc(alinaBranch())+"» (источник: Письмо/СЗ). "+(synced?"Сохранила в облако ✅":"⚠️ Нет связи с облаком — сохранила локально, синхронизирую при подключении."));
   if(typeof ntf==="function") ntf("Алина добавила "+n+" поручений");
+}
+</script>
+<datalist id="execList"></datalist>
+<script>
+function refreshExecList(){
+  var dl=document.getElementById("execList"); if(!dl) return;
+  var set={};
+  try{
+    var srcs=(typeof getAllTaskSources==="function")?getAllTaskSources():[];
+    if(!srcs.length && typeof skKey==="function") srcs=[{key:skKey()}];
+    srcs.forEach(function(s){ var arr=[]; try{ arr=JSON.parse(localStorage.getItem(s.key)||"[]"); }catch(e){}
+      arr.forEach(function(t){ var r=(t.responsible||"").trim(); if(r) set[r]=1; }); });
+  }catch(e){}
+  var names=Object.keys(set).sort(function(a,b){ return a.localeCompare(b,"ru"); });
+  dl.innerHTML=names.map(function(n){ return '<option value="'+String(n).replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;")+'"></option>'; }).join("");
 }
 </script>
 </body>
