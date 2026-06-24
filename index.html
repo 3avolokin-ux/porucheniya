@@ -854,7 +854,7 @@ async function checkAuth() {
   const pwd = document.getElementById('auth-pwd').value;
   const hash = await sha256(pwd);
   if (hash === AUTH_HASH) {
-    sessionStorage.setItem('auth_ok','1');
+    localStorage.setItem('auth_ok','1');
     document.getElementById('auth-overlay').classList.add('hidden');
   } else {
     const inp = document.getElementById('auth-pwd');
@@ -866,7 +866,7 @@ async function checkAuth() {
   }
 }
 document.addEventListener('DOMContentLoaded', () => {
-  if (sessionStorage.getItem('auth_ok') === '1') {
+  if (localStorage.getItem('auth_ok') === '1') {
     document.getElementById('auth-overlay').classList.add('hidden');
   }
   document.getElementById('auth-pwd').addEventListener('keydown', e => {
@@ -3657,6 +3657,27 @@ void main(void) {
 .alina-head{display:flex;align-items:center;gap:11px;padding:13px 15px;border-bottom:1px solid var(--border);background:linear-gradient(135deg,rgba(249,115,22,.12),rgba(251,191,36,.06));flex-shrink:0;}
 .alina-ava{width:38px;height:38px;border-radius:50%;flex-shrink:0;background:linear-gradient(135deg,#F97316,#FBBF24);color:#1a1206;display:flex;align-items:center;justify-content:center;}
 .alina-ava svg{width:22px;height:22px;}
+/* --- Живая Алина --- */
+.al-face{overflow:visible;}
+.al-face .al-head{transform-box:fill-box;transform-origin:center;animation:alBreath 3.6s ease-in-out infinite;}
+.al-face .al-eye{transform-box:fill-box;transform-origin:center;animation:alBlink 4.4s ease-in-out infinite;}
+.al-face .al-ant{transform-box:fill-box;transform-origin:center bottom;animation:alAnt 3.6s ease-in-out infinite;}
+.al-face .al-mouth{transform-box:fill-box;transform-origin:center;}
+.alina-ava svg.al-face,#alina-fab svg.al-face{animation:alFloat 4.2s ease-in-out infinite;}
+@keyframes alFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-1.3px)}}
+@keyframes alBreath{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
+@keyframes alBlink{0%,90%,100%{transform:scaleY(1)}95%{transform:scaleY(.12)}}
+@keyframes alAnt{0%,100%{transform:rotate(0)}25%{transform:rotate(8deg)}75%{transform:rotate(-8deg)}}
+/* Слушает (идёт запись) */
+.alina-ava.al-listening{animation:alListen 1.1s ease-in-out infinite;}
+@keyframes alListen{0%,100%{box-shadow:0 0 0 0 rgba(249,140,30,.5)}65%{box-shadow:0 0 0 8px rgba(249,140,30,0)}}
+.al-listening .al-eye{animation:none!important;transform:scaleY(1.3) scaleX(1.12);}
+.al-listening .al-ant{animation-duration:1s;}
+/* Говорит (читает ответ вслух) */
+.al-speaking .al-mouth{animation:alTalk .5s ease-in-out infinite;}
+@keyframes alTalk{0%,100%{transform:scaleY(1)}50%{transform:scaleY(2.1) translateY(.3px)}}
+.al-speaking .al-head{animation-duration:2.2s;}
+@media (prefers-reduced-motion:reduce){.al-face .al-head,.al-face .al-eye,.al-face .al-ant,.alina-ava svg.al-face,#alina-fab svg.al-face,.al-speaking .al-mouth,.alina-ava.al-listening{animation:none!important;}}
 .alina-ht b{font-size:15px;color:var(--g900);display:block;line-height:1.2;}
 .alina-ht span{font-size:11.5px;color:var(--g600);}
 .alina-x{margin-left:auto;background:none;border:none;cursor:pointer;color:var(--g400);padding:6px;border-radius:8px;line-height:0;}
@@ -3694,10 +3715,10 @@ void main(void) {
   #alina-panel{inset:0;left:0;right:0;top:0;bottom:0;width:auto;max-width:none;height:100dvh;max-height:none;border:none;border-radius:0;}
 }
 </style>
-<div id="alina-fab" onclick="alinaToggle()" title="Алина — ИИ-помощник"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13.5" r="6"/><path d="M9.7 13h.01M14.3 13h.01"/><path d="M9.8 15.8a3 3 0 0 0 4.4 0"/><path d="M12 7.5V6"/><path d="M12 6 9.7 4.6v2.8z" fill="currentColor" stroke-width="1"/><path d="M12 6 14.3 4.6v2.8z" fill="currentColor" stroke-width="1"/></svg></div>
+<div id="alina-fab" onclick="alinaToggle()" title="Алина — ИИ-помощник"><svg class="al-face" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><g class="al-ant"><path d="M12 7.5V6"/><path d="M12 6 9.7 4.6v2.8z" fill="currentColor" stroke-width="1"/><path d="M12 6 14.3 4.6v2.8z" fill="currentColor" stroke-width="1"/></g><circle class="al-head" cx="12" cy="13.5" r="6"/><g class="al-eyes"><circle class="al-eye" cx="9.7" cy="13" r=".95" fill="currentColor" stroke="none"/><circle class="al-eye" cx="14.3" cy="13" r=".95" fill="currentColor" stroke="none"/></g><path class="al-mouth" d="M9.8 15.8a3 3 0 0 0 4.4 0"/></svg></div>
 <div id="alina-panel" class="alina-hidden" aria-label="ИИ-помощник Алина">
   <div class="alina-head">
-    <div class="alina-ava"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13.5" r="6"/><path d="M9.7 13h.01M14.3 13h.01"/><path d="M9.8 15.8a3 3 0 0 0 4.4 0"/><path d="M12 7.5V6"/><path d="M12 6 9.7 4.6v2.8z" fill="currentColor" stroke-width="1"/><path d="M12 6 14.3 4.6v2.8z" fill="currentColor" stroke-width="1"/></svg></div>
+    <div class="alina-ava" id="alina-ava"><svg class="al-face" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><g class="al-ant"><path d="M12 7.5V6"/><path d="M12 6 9.7 4.6v2.8z" fill="currentColor" stroke-width="1"/><path d="M12 6 14.3 4.6v2.8z" fill="currentColor" stroke-width="1"/></g><circle class="al-head" cx="12" cy="13.5" r="6"/><g class="al-eyes"><circle class="al-eye" cx="9.7" cy="13" r=".95" fill="currentColor" stroke="none"/><circle class="al-eye" cx="14.3" cy="13" r=".95" fill="currentColor" stroke="none"/></g><path class="al-mouth" d="M9.8 15.8a3 3 0 0 0 4.4 0"/></svg></div>
     <div class="alina-ht"><b>Алина</b><span>ИИ-помощник по поручениям</span></div>
     <button class="alina-x" id="alina-voice" onclick="alinaVoiceToggle()" aria-label="Голосовой режим" title="Озвучивать ответы"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M19 5a9 9 0 0 1 0 14"/></svg></button>
     <button class="alina-x" onclick="alinaToggle()" aria-label="Закрыть"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
@@ -3824,7 +3845,7 @@ function alinaSend(q){
   var explicit=(typeof q==="string" && q);
   var msg=explicit ? q : (inp.value||"").trim();
   if(!msg) return;
-  if(inp && !explicit) inp.value="";
+  if(inp) inp.value="";
   alinaPush("u", alinaEsc(msg));
   var bub=alinaPush("a","…");
   alinaCall(msg, bub);
@@ -3956,28 +3977,62 @@ function refreshExecList(){
 <script>
 window.alinaVoiceMode=false;
 var _alinaIOS=/iP(hone|ad|od)/.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1);
+var _alinaSR=window.SpeechRecognition||window.webkitSpeechRecognition;
+// Если встроенное распознавание на этом устройстве уже подвело — больше не мучаем, сразу клавиатура
+function _alinaIosBroken(){ try{ return localStorage.getItem("alinaIosSttBroken")==="1"; }catch(e){ return false; } }
+function _alinaSetIosBroken(){ try{ localStorage.setItem("alinaIosSttBroken","1"); }catch(e){} }
+// Старый способ — курсор в поле + микрофон системной клавиатуры
+function _alinaKbdMic(){ var q=document.getElementById("alina-q"); if(q) q.focus(); if(typeof alinaPush==="function") alinaPush("a","Поставила курсор в поле — тапните 🎤 на клавиатуре, продиктуйте и отправьте."); }
+// Мимика Алины: 'al-listening' (запись) / 'al-speaking' (читает вслух)
+function alinaFace(state,on){ var a=document.getElementById("alina-ava"); if(a) a.classList.toggle(state,!!on); var f=document.getElementById("alina-fab"); if(f) f.classList.toggle(state,!!on); }
 function alinaGetRec(){
-  var SR=window.SpeechRecognition||window.webkitSpeechRecognition; if(!SR) return null;
+  if(!_alinaSR) return null;
   if(!window._alinaRec){
-    var r=new SR(); r.lang="ru-RU"; r.interimResults=true; r.continuous=false; r.maxAlternatives=1;
-    r.onresult=function(e){ var txt=""; for(var i=0;i<e.results.length;i++){ txt+=e.results[i][0].transcript; } var q=document.getElementById("alina-q"); if(q) q.value=txt; if(e.results[e.results.length-1].isFinal) window._alinaFinal=txt; };
-    r.onend=function(){ var m=document.getElementById("alina-mic"); if(m) m.classList.remove("rec"); window._alinaRecOn=false; var fin=window._alinaFinal; window._alinaFinal=""; if(fin && window._alinaAutoSend){ window._alinaAutoSend=false; if(typeof alinaSend==="function") alinaSend(fin); } };
-    r.onerror=function(){ var m=document.getElementById("alina-mic"); if(m) m.classList.remove("rec"); window._alinaRecOn=false; };
+    var r=new _alinaSR(); r.lang="ru-RU"; r.interimResults=true; r.continuous=false; r.maxAlternatives=1;
+    r.onresult=function(e){ var txt=""; for(var i=0;i<e.results.length;i++){ txt+=e.results[i][0].transcript; } window._alinaGotResult=true; window._alinaIosFails=0; var q=document.getElementById("alina-q"); if(q) q.value=txt; if(e.results[e.results.length-1].isFinal) window._alinaFinal=txt; };
+    r.onend=function(){
+      var m=document.getElementById("alina-mic"); if(m) m.classList.remove("rec"); window._alinaRecOn=false; alinaFace("al-listening",false);
+      // На iPhone запись прошла, но ни слова не распозналось → не сразу сдаёмся: 2 «тишины» подряд = переходим на клавиатуру
+      if(_alinaIOS && !window._alinaGotResult){
+        window._alinaIosFails=(window._alinaIosFails||0)+1;
+        if(window._alinaIosFails>=2){ _alinaSetIosBroken(); if(typeof alinaPush==="function") alinaPush("a","Встроенное распознавание на этом iPhone не отзывается 🙈 Переключаюсь на 🎤 клавиатуры."); _alinaKbdMic(); }
+        else if(typeof alinaPush==="function") alinaPush("a","Не расслышала 🙈 Тапните 🎤 ещё раз и говорите чуть ближе — или используйте микрофон клавиатуры.");
+        return;
+      }
+      var fin=window._alinaFinal; window._alinaFinal=""; if(fin && window._alinaAutoSend){ window._alinaAutoSend=false; if(typeof alinaSend==="function") alinaSend(fin); }
+    };
+    r.onerror=function(ev){
+      var m=document.getElementById("alina-mic"); if(m) m.classList.remove("rec"); window._alinaRecOn=false; alinaFace("al-listening",false);
+      var err=ev&&ev.error;
+      if(err==="not-allowed"||err==="service-not-allowed"){ if(_alinaIOS) _alinaSetIosBroken(); if(typeof alinaPush==="function") alinaPush("a","Нет доступа к микрофону 🎤 Разрешите его для сайта в настройках Safari — либо диктуйте через 🎤 клавиатуры."); if(_alinaIOS) _alinaKbdMic(); return; }
+      if(_alinaIOS && err!=="no-speech" && err!=="aborted"){ _alinaSetIosBroken(); if(typeof alinaPush==="function") alinaPush("a","Распознавание в приложении не сработало 🙈 Переключаюсь на 🎤 клавиатуры."); _alinaKbdMic(); }
+    };
     window._alinaRec=r;
   }
   return window._alinaRec;
 }
-function alinaStartRec(autoSend){
-  var r=alinaGetRec(); if(!r){ if(typeof alinaPush==="function") alinaPush("a","Голосовой ввод не поддерживается в этом браузере 🙈 Откройте в Chrome или Edge."); return; }
-  window._alinaAutoSend=!!autoSend; window._alinaFinal="";
-  try{ r.start(); window._alinaRecOn=true; var m=document.getElementById("alina-mic"); if(m) m.classList.add("rec"); }catch(e){}
+var _alinaDDG=/DuckDuckGo|Ddg/i.test(navigator.userAgent);
+function _alinaNoSttMsg(){
+  if(_alinaDDG) return "В браузере DuckDuckGo голосовой ввод недоступен 🦆🙈 Откройте приложение в Safari, Chrome или Edge — там микрофон заработает.";
+  return "Голосовой ввод не поддерживается в этом браузере 🙈 Так бывает в DuckDuckGo и некоторых других — откройте приложение в Safari, Chrome или Edge.";
 }
-function alinaMic(){ if(_alinaIOS){ var q=document.getElementById("alina-q"); if(q) q.focus(); if(typeof alinaPush==="function") alinaPush("a","На iPhone диктовка идёт через 🎤 на самой клавиатуре. Я поставила курсор в поле — тапните микрофон на клавиатуре, продиктуйте и отправьте. (Распознавание прямо внутри приложения Safari на iPhone, увы, не поддерживает.)"); return; } if(window._alinaRecOn){ try{ window._alinaRec.stop(); }catch(e){} return; } alinaStartRec(window.alinaVoiceMode===true); }
+function alinaStartRec(autoSend){
+  var r=alinaGetRec(); if(!r){ if(_alinaIOS){ _alinaKbdMic(); } else if(typeof alinaPush==="function") alinaPush("a",_alinaNoSttMsg()); return; }
+  window._alinaAutoSend=!!autoSend; window._alinaFinal=""; window._alinaGotResult=false;
+  try{ r.start(); window._alinaRecOn=true; var m=document.getElementById("alina-mic"); if(m) m.classList.add("rec"); alinaFace("al-listening",true); }
+  catch(e){ if(_alinaIOS){ _alinaSetIosBroken(); _alinaKbdMic(); } }
+}
+function alinaMic(){
+  if(window._alinaRecOn){ try{ window._alinaRec.stop(); }catch(e){} return; }
+  // На iPhone: если встроенное распознавание ранее подвело или его нет — сразу клавиатура
+  if(_alinaIOS && (_alinaIosBroken()||!_alinaSR)){ _alinaKbdMic(); return; }
+  alinaStartRec(window.alinaVoiceMode===true);
+}
 function alinaVoiceToggle(){
   window.alinaVoiceMode=!window.alinaVoiceMode;
   var b=document.getElementById("alina-voice"); if(b) b.classList.toggle("on",window.alinaVoiceMode);
-  if(window.alinaVoiceMode){ if(typeof alinaPush==="function") alinaPush("a", _alinaIOS ? "Голосовой режим 🔊 — буду читать ответы вслух. Диктовать на iPhone — через 🎤 на клавиатуре (тапните поле ввода). Выключить — этой же кнопкой." : "Голосовой режим включён 🔊 Нажмите микрофон и говорите — отвечу вслух, потом снова послушаю. Выключить — этой же кнопкой."); try{ window.speechSynthesis.speak(new SpeechSynthesisUtterance(" ")); }catch(e){} }
-  else { try{ window.speechSynthesis&&window.speechSynthesis.cancel(); }catch(e){} }
+  if(window.alinaVoiceMode){ if(typeof alinaPush==="function") alinaPush("a", _alinaIOS ? "Голосовой режим 🔊 — читаю ответы вслух. Диктовать — кнопкой 🎤 (запись прямо в приложении). Выключить — этой же кнопкой." : "Голосовой режим включён 🔊 Нажмите микрофон и говорите — отвечу вслух, потом снова послушаю. Выключить — этой же кнопкой."); try{ window.speechSynthesis.speak(new SpeechSynthesisUtterance(" ")); }catch(e){} }
+  else { try{ window.speechSynthesis&&window.speechSynthesis.cancel(); }catch(e){} alinaFace("al-speaking",false); }
 }
 function alinaSpeak(text){
   try{
@@ -3985,10 +4040,12 @@ function alinaSpeak(text){
     var t=String(text||"").replace(/\*\*/g,"").replace(/[\u{1F000}-\u{1FFFF}☀-➿️⬀-⯿]/gu,"").replace(/\s+/g," ").trim();
     if(!t) return;
     window.speechSynthesis.cancel();
-    var u=new SpeechSynthesisUtterance(t); u.lang="ru-RU"; u.rate=1.05; u.pitch=1.1;
-    var vs=window.speechSynthesis.getVoices()||[]; var ru=vs.filter(function(v){return /ru/i.test(v.lang);});
-    if(ru.length){ var fem=ru.filter(function(v){return /female|жен|Milena|Katya|Alyona|Yandex|Google/i.test(v.name);}); u.voice=(fem[0]||ru[0]); }
-    u.onend=function(){ if(window.alinaVoiceMode && !_alinaIOS){ setTimeout(function(){ if(window.alinaVoiceMode) alinaStartRec(true); }, 350); } };
+    var u=new SpeechSynthesisUtterance(t); u.lang="ru-RU"; u.rate=1.0; u.pitch=1.04;
+    var vs=window.speechSynthesis.getVoices()||[]; var ru=vs.filter(function(v){return /ru[-_]?RU/i.test(v.lang)||/russ|русск/i.test(v.name);});
+    if(ru.length){ var pri=ru.filter(function(v){return /enhanced|premium|siri|улучш|neural|Milena|Katya|Alyona|Yandex|Google/i.test(v.name);}); u.voice=(pri[0]||ru[0]); }
+    u.onstart=function(){ alinaFace("al-speaking",true); };
+    u.onerror=function(){ alinaFace("al-speaking",false); };
+    u.onend=function(){ alinaFace("al-speaking",false); if(window.alinaVoiceMode && !_alinaIOS){ setTimeout(function(){ if(window.alinaVoiceMode) alinaStartRec(true); }, 350); } };
     window.speechSynthesis.speak(u);
   }catch(e){}
 }
