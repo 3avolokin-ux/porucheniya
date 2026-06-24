@@ -3711,7 +3711,7 @@ void main(void) {
       <input id="alina-q" placeholder="Спросите или вставьте текст…" onkeydown="if(event.key==='Enter')alinaSend()">
       <button class="alina-snd" onclick="alinaSend()" aria-label="Отправить"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg></button>
     </div>
-    <input type="file" id="alina-file" accept="image/*,application/pdf,.xlsx,.xls,.docx" style="display:none" onchange="alinaFile(event)">
+    <input type="file" id="alina-file" accept="image/*,application/pdf,.xlsx,.xls,.docx" multiple style="display:none" onchange="alinaFile(event)">
   </div>
 </div>
 <script>
@@ -3776,14 +3776,16 @@ function alinaGoto(ref){
   }, 280);
 }
 function alinaCardHtml(items){
-  window._alinaItems=items;
+  window._alinaCards=window._alinaCards||{};
+  var cid=(window._alinaCardN=(window._alinaCardN||0)+1);
+  window._alinaCards[cid]=items;
   var h='<div style="font-size:12.5px;margin-bottom:4px;">Нашла поручений: <b>'+items.length+'</b>. Добавить в филиал «<b>'+alinaEsc(alinaBranch())+'</b>»:</div>';
   for(var k=0;k<items.length;k++){ var t=items[k];
-    h+='<div class="alina-item"><label style="display:flex;align-items:center;gap:7px;font-size:12px;color:var(--g600);margin-bottom:6px;"><input type="checkbox" class="alina-ck" data-i="'+k+'" checked style="accent-color:var(--c1)"> Поручение '+(k+1)+'</label>'
-      +'<textarea id="alina-t-'+k+'">'+alinaEsc(t.task||"")+'</textarea>'
-      +'<div class="row"><input id="alina-r-'+k+'" placeholder="Ответственный" value="'+alinaEsc(t.responsible||"")+'"><input id="alina-d-'+k+'" type="date" value="'+alinaEsc(t.datePlan||"")+'"></div></div>';
+    h+='<div class="alina-item"><label style="display:flex;align-items:center;gap:7px;font-size:12px;color:var(--g600);margin-bottom:6px;"><input type="checkbox" class="alina-ck" data-c="'+cid+'" data-i="'+k+'" checked style="accent-color:var(--c1)"> Поручение '+(k+1)+'</label>'
+      +'<textarea id="alina-t-'+cid+'-'+k+'">'+alinaEsc(t.task||"")+'</textarea>'
+      +'<div class="row"><input id="alina-r-'+cid+'-'+k+'" placeholder="Ответственный" value="'+alinaEsc(t.responsible||"")+'"><input id="alina-d-'+cid+'-'+k+'" type="date" value="'+alinaEsc(t.datePlan||"")+'"></div></div>';
   }
-  h+='<button class="alina-go" id="alina-addbtn" style="margin-top:10px" onclick="alinaAdd()">Добавить отмеченные</button>';
+  h+='<button class="alina-go" id="alina-addbtn-'+cid+'" style="margin-top:10px" onclick="alinaAdd('+cid+')">Добавить отмеченные</button>';
   return h;
 }
 function alinaCall(message, bub){
@@ -3818,8 +3820,27 @@ function alinaSend(q){
   alinaCall(msg, bub);
 }
 function alinaPhoto(){ var f=document.getElementById("alina-file"); if(f){ f.value=""; f.click(); } }
+function alinaImgBatch(files,bub){
+  if(typeof Tesseract==="undefined"){ bub.innerHTML='<span style="color:var(--err)">OCR не загрузился. Обновите страницу.</span>'; return; }
+  var texts=[], i=0;
+  function nextOne(){
+    if(i>=files.length){ var all=texts.join("\n\n").trim(); if(!all){ bub.innerHTML="Не удалось распознать текст на фото."; return; } bub.textContent="Распознала "+files.length+" стр., разбираю…"; alinaCall(all,bub); return; }
+    bub.textContent="Распознаю фото "+(i+1)+"/"+files.length+"…";
+    Tesseract.recognize(files[i],"rus+eng",{logger:function(m){ if(m.status==="recognizing text"){ bub.textContent="Фото "+(i+1)+"/"+files.length+"… "+Math.round(m.progress*100)+"%"; } }})
+      .then(function(r){ texts.push((r&&r.data&&r.data.text)||""); i++; nextOne(); })
+      .catch(function(){ i++; nextOne(); });
+  }
+  nextOne();
+}
 function alinaFile(e){
-  var file=e.target.files && e.target.files[0]; if(!file) return;
+  var files=e.target.files; if(!files||!files.length) return;
+  var imgs=[]; for(var z=0;z<files.length;z++){ var nz=(files[z].name||"").toLowerCase(), tz=(files[z].type||""); if(/^image\//i.test(tz)||/\.(jpe?g|png|webp|heic|heif|bmp|gif)$/i.test(nz)) imgs.push(files[z]); }
+  if(files.length>1 && imgs.length===files.length){
+    alinaPush("u","📷 Фото: "+imgs.length+" стр.");
+    var bb=alinaPush("a","Распознаю страницы…");
+    alinaImgBatch(imgs, bb); return;
+  }
+  var file=files[0];
   var nm=(file.name||"").toLowerCase(), ty=(file.type||"");
   var isPdf=/\.pdf$/.test(nm)||/pdf/i.test(ty);
   var isXls=/\.xlsx?$/.test(nm)||/sheet|excel/i.test(ty);
@@ -3889,18 +3910,21 @@ function alinaPdf(file,bub){
     });
   }).catch(function(){ bub.innerHTML='<span style="color:var(--err)">Не удалось прочитать PDF.</span>'; });
 }
-function alinaAdd(){
+function alinaAdd(cid){
   if(typeof addTask!=="function") return;
-  var cks=document.querySelectorAll(".alina-ck"), n=0;
+  var items=(window._alinaCards||{})[cid]||[];
+  var cks=document.querySelectorAll('.alina-ck[data-c="'+cid+'"]'), n=0;
   for(var k=0;k<cks.length;k++){ if(!cks[k].checked) continue; var i=cks[k].getAttribute("data-i");
-    var task=(document.getElementById("alina-t-"+i).value||"").trim(); if(!task) continue;
-    addTask({ task:task, responsible:(document.getElementById("alina-r-"+i).value||"").trim(),
-      datePlan:(document.getElementById("alina-d-"+i).value||""),
-      reporting:(window._alinaItems[i]&&window._alinaItems[i].reporting)||"", source:"letter" });
+    var te=document.getElementById("alina-t-"+cid+"-"+i); if(!te) continue;
+    var task=(te.value||"").trim(); if(!task) continue;
+    addTask({ task:task, responsible:(document.getElementById("alina-r-"+cid+"-"+i).value||"").trim(),
+      datePlan:(document.getElementById("alina-d-"+cid+"-"+i).value||""),
+      reporting:(items[i]&&items[i].reporting)||"", source:"letter" });
     n++;
   }
-  var btn=document.getElementById("alina-addbtn"); if(btn){ btn.disabled=true; btn.textContent="Добавлено: "+n; }
-  alinaPush("a","Готово — добавила "+n+" поручений в филиал «"+alinaEsc(alinaBranch())+"». Источник: Письмо/СЗ.");
+  var btn=document.getElementById("alina-addbtn-"+cid); if(btn){ btn.disabled=true; btn.textContent="Добавлено: "+n; }
+  var synced=(typeof fbConnected!=="undefined")?fbConnected:true;
+  alinaPush("a","Готово — добавила "+n+" поручений в «"+alinaEsc(alinaBranch())+"» (источник: Письмо/СЗ). "+(synced?"Сохранила в облако ✅":"⚠️ Нет связи с облаком — сохранила локально, синхронизирую при подключении."));
   if(typeof ntf==="function") ntf("Алина добавила "+n+" поручений");
 }
 </script>
