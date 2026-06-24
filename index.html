@@ -3955,6 +3955,7 @@ function refreshExecList(){
 </script>
 <script>
 window.alinaVoiceMode=false;
+var _alinaIOS=/iP(hone|ad|od)/.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1);
 function alinaGetRec(){
   var SR=window.SpeechRecognition||window.webkitSpeechRecognition; if(!SR) return null;
   if(!window._alinaRec){
@@ -3971,11 +3972,11 @@ function alinaStartRec(autoSend){
   window._alinaAutoSend=!!autoSend; window._alinaFinal="";
   try{ r.start(); window._alinaRecOn=true; var m=document.getElementById("alina-mic"); if(m) m.classList.add("rec"); }catch(e){}
 }
-function alinaMic(){ if(window._alinaRecOn){ try{ window._alinaRec.stop(); }catch(e){} return; } alinaStartRec(window.alinaVoiceMode===true); }
+function alinaMic(){ if(_alinaIOS){ var q=document.getElementById("alina-q"); if(q) q.focus(); if(typeof alinaPush==="function") alinaPush("a","На iPhone диктовка идёт через 🎤 на самой клавиатуре. Я поставила курсор в поле — тапните микрофон на клавиатуре, продиктуйте и отправьте. (Распознавание прямо внутри приложения Safari на iPhone, увы, не поддерживает.)"); return; } if(window._alinaRecOn){ try{ window._alinaRec.stop(); }catch(e){} return; } alinaStartRec(window.alinaVoiceMode===true); }
 function alinaVoiceToggle(){
   window.alinaVoiceMode=!window.alinaVoiceMode;
   var b=document.getElementById("alina-voice"); if(b) b.classList.toggle("on",window.alinaVoiceMode);
-  if(window.alinaVoiceMode){ if(typeof alinaPush==="function") alinaPush("a","Голосовой режим включён 🔊 Нажмите микрофон и говорите — отвечу вслух. Выключить — этой же кнопкой."); try{ window.speechSynthesis.speak(new SpeechSynthesisUtterance(" ")); }catch(e){} }
+  if(window.alinaVoiceMode){ if(typeof alinaPush==="function") alinaPush("a", _alinaIOS ? "Голосовой режим 🔊 — буду читать ответы вслух. Диктовать на iPhone — через 🎤 на клавиатуре (тапните поле ввода). Выключить — этой же кнопкой." : "Голосовой режим включён 🔊 Нажмите микрофон и говорите — отвечу вслух, потом снова послушаю. Выключить — этой же кнопкой."); try{ window.speechSynthesis.speak(new SpeechSynthesisUtterance(" ")); }catch(e){} }
   else { try{ window.speechSynthesis&&window.speechSynthesis.cancel(); }catch(e){} }
 }
 function alinaSpeak(text){
@@ -3987,7 +3988,7 @@ function alinaSpeak(text){
     var u=new SpeechSynthesisUtterance(t); u.lang="ru-RU"; u.rate=1.05; u.pitch=1.1;
     var vs=window.speechSynthesis.getVoices()||[]; var ru=vs.filter(function(v){return /ru/i.test(v.lang);});
     if(ru.length){ var fem=ru.filter(function(v){return /female|жен|Milena|Katya|Alyona|Yandex|Google/i.test(v.name);}); u.voice=(fem[0]||ru[0]); }
-    u.onend=function(){ if(window.alinaVoiceMode){ setTimeout(function(){ if(window.alinaVoiceMode) alinaStartRec(true); }, 350); } };
+    u.onend=function(){ if(window.alinaVoiceMode && !_alinaIOS){ setTimeout(function(){ if(window.alinaVoiceMode) alinaStartRec(true); }, 350); } };
     window.speechSynthesis.speak(u);
   }catch(e){}
 }
